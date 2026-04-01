@@ -32,6 +32,9 @@
   --font-main: 'Sora', sans-serif;
   --font-mono: 'Space Mono', monospace;
 
+  --sidebar-w: 240px;
+  --topbar-h:  58px;
+
   --radius-sm: 6px;
   --radius:    8px;
   --radius-md: 10px;
@@ -65,6 +68,8 @@ body {
 a { text-decoration: none; color: inherit; transition: color 0.15s; }
 button { font-family: var(--font-main); cursor: pointer; }
 img, svg { display: block; }
+img { max-width: 100%; height: auto; }
+table { border-collapse: collapse; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }

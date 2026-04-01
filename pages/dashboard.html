@@ -107,7 +107,7 @@
         <div class="admin-avatar">A</div>
         <div>
           <div class="admin-name">Administrator</div>
-          <div class="admin-role">Super Admin</div>
+          <div class="admin-role">Admin</div>
         </div>
       </div>
       <a href="../login.html" class="btn-logout" title="Logout">
@@ -126,6 +126,14 @@
     <!-- Topbar -->
     <div class="topbar">
       <div class="topbar-left">
+        <!-- Hamburger button (mobile) -->
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Buka menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
         <div class="breadcrumb">
           PUSTAKA
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -138,6 +146,9 @@
         <span id="topbar-date"></span>
       </div>
     </div>
+
+    <!-- Overlay sidebar (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <!-- Alert -->
     <div id="alert-box"></div>
@@ -546,5 +557,32 @@
   <script src="../assets/js/db.js"></script>
   <script src="../assets/js/utils.js"></script>
   <script src="../assets/js/dashboard.js"></script>
+  <script>
+    // Hamburger menu toggle
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const sidebar      = document.querySelector('.sidebar');
+    const overlay      = document.getElementById('sidebar-overlay');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    hamburgerBtn.addEventListener('click', openSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    // Tutup sidebar saat nav item diklik (mobile)
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) closeSidebar();
+      });
+    });
+  </script>
 </body>
 </html>

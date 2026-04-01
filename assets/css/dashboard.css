@@ -319,6 +319,7 @@ thead th {
   color: var(--gray-400);
   background: var(--gray-50);
   border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
 }
 
 tbody td {
@@ -326,6 +327,7 @@ tbody td {
   border-bottom: 1px solid var(--gray-100);
   font-size: 13.5px;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 tbody tr:last-child td { border-bottom: none; }
@@ -415,8 +417,8 @@ tbody tr:hover { background: var(--gray-50); }
 ══════════════════════════════════════ */
 .form-row { display: grid; gap: 14px; margin-bottom: 14px; }
 .form-row.cols-1 { grid-template-columns: 1fr; }
-.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
-.form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-row.cols-2 { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.form-row.cols-3 { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 
@@ -496,9 +498,13 @@ tbody tr:hover { background: var(--gray-50); }
   inset: 0;
   background: rgba(0,0,0,0.45);
   z-index: 300;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   backdrop-filter: blur(2px);
+  padding: 20px 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .overlay.show { display: flex; }
@@ -506,12 +512,13 @@ tbody tr:hover { background: var(--gray-50); }
 .modal {
   background: var(--white);
   border-radius: var(--radius-lg);
-  width: 90%;
-  max-width: 540px;
-  max-height: 90vh;
-  overflow-y: auto;
+  width: 100%;
+  max-width: 520px;
+  height: fit-content;
   box-shadow: var(--shadow-lg);
   animation: modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  flex-shrink: 0;
+  margin: auto;
 }
 
 @keyframes modalIn {
@@ -662,4 +669,260 @@ tbody tr:hover { background: var(--gray-50); }
 @media print {
   .sidebar, .topbar, .page-header, .no-print { display: none !important; }
   .main { margin-left: 0; }
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE — Mobile & Tablet
+══════════════════════════════════════ */
+
+/* Hamburger button — tersembunyi di desktop */
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+  color: var(--black);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.hamburger-btn:hover { background: var(--gray-200); }
+
+/* Sidebar overlay (mobile) */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.show { display: block; }
+
+/* ── Tablet (≤ 1024px) ── */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .layout-2col {
+    grid-template-columns: 1fr;
+  }
+  .page-content {
+    padding: 20px 20px;
+  }
+  .topbar {
+    padding: 0 20px;
+  }
+}
+
+/* ── Mobile (≤ 768px) ── */
+@media (max-width: 768px) {
+
+  /* Sembunyikan sidebar, tampilkan sebagai drawer */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 200;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Main tidak perlu margin kiri */
+  .main {
+    margin-left: 0;
+  }
+
+  /* Tampilkan hamburger */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  /* Topbar */
+  .topbar {
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .topbar-left {
+    gap: 8px;
+  }
+  #topbar-date {
+    display: none;
+  }
+
+  /* Stats — 2 kolom di mobile */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .stat-card {
+    padding: 14px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+
+  /* Page header — stack vertikal */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  /* Page content padding */
+  .page-content {
+    padding: 16px;
+  }
+
+  /* Tabel — wajib scroll horizontal */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Min-width per halaman disesuaikan jumlah kolom */
+  #tbl-buku,    #tbl-buku    thead tr    { min-width: 600px; }
+  #tbl-anggota, #tbl-anggota thead tr   { min-width: 540px; }
+  #tbl-pinjam,  #tbl-pinjam  thead tr   { min-width: 560px; }
+  #tbl-kembali, #tbl-kembali thead tr   { min-width: 560px; }
+  #tbl-denda,   #tbl-denda   thead tr   { min-width: 500px; }
+  .table-wrap table { min-width: 480px; }
+
+  /* Layout 2 kolom → 1 kolom */
+  .layout-2col,
+  .quick-grid,
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modal full width */
+  .modal {
+    width: 100%;
+    margin: 0;
+    border-radius: var(--radius-lg);
+  }
+
+  .overlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  /* Card header — stack jika perlu */
+  .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .card-header .btn-group {
+    flex-wrap: wrap;
+  }
+
+  /* Search bar full width */
+  .search-wrap {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* Alert */
+  .alert {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  /* Surat doc */
+  .surat-doc {
+    padding: 20px 16px;
+  }
+}
+
+/* ── Small mobile (≤ 480px) ── */
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .stat-card {
+    padding: 12px;
+  }
+  .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .btn-group {
+    flex-wrap: wrap;
+  }
+  .page-header {
+    margin-bottom: 16px;
+  }
+  .breadcrumb {
+    font-size: 11px;
+  }
+}
+
+/* ── Card header responsif (semua halaman) ── */
+@media (max-width: 640px) {
+  /* Card header stack vertikal */
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  /* Search bar full width */
+  .search-wrap {
+    max-width: 100%;
+    width: 100%;
+  }
+  .search-wrap input {
+    width: 100%;
+  }
+
+  /* Page header: judul di atas, tombol di bawah */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  /* Tombol tambah full width di HP */
+  .page-header > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Table padding lebih kecil */
+  thead th {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  tbody td {
+    padding: 10px 10px;
+    font-size: 12.5px;
+  }
+
+  /* Card body padding lebih kecil */
+  .card-body {
+    padding: 14px;
+  }
+
+  /* Modal body padding */
+  .modal-body {
+    padding: 14px 16px 18px;
+  }
+  .modal-header {
+    padding: 16px 16px 0;
+  }
 }

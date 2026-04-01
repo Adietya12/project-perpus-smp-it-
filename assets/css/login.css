@@ -491,6 +491,28 @@ body {
   .left-panel  { width: 100%; }
 }
 
-@media (max-width: 480px) {
-  .left-panel { padding: 28px 24px; }
+@media (max-width: 600px) {
+  body { overflow-y: auto; }
+  .left-panel {
+    padding: 28px 24px;
+    min-height: 100vh;
+  }
+  .left-body {
+    padding: 28px 0;
+    max-width: 100%;
+  }
+  .form-title { font-size: 24px; }
+  .form-sub   { font-size: 13px; margin-bottom: 24px; }
+  .cred-hint  { margin-top: 20px; }
+  .left-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  .left-panel { padding: 24px 18px; }
+  .form-title { font-size: 22px; }
+  .row-between { flex-direction: column; align-items: flex-start; gap: 10px; }
 }

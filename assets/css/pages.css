@@ -44,3 +44,14 @@
 
 .surat-check-icon.ok  { background: var(--success-light); color: var(--success); }
 .surat-check-icon.err { background: var(--danger-light);  color: var(--danger);  }
+
+/* ── Responsive pages ── */
+@media (max-width: 768px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .surat-check-item {
+    font-size: 13px;
+  }
+}

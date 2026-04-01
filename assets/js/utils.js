@@ -52,12 +52,18 @@ function showAlert(msg, type = 'success') {
 
 /** Buka modal */
 function openModal(id) {
-  document.getElementById(id).classList.add('show');
+  const el = document.getElementById(id);
+  el.classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
 
 /** Tutup modal */
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
+  // Kembalikan scroll body jika tidak ada modal lain yang terbuka
+  if (!document.querySelector('.overlay.show')) {
+    document.body.style.overflow = '';
+  }
 }
 
 /** Filter baris tabel berdasarkan teks */
@@ -72,6 +78,7 @@ function filterTable(tbodyId, query) {
 document.addEventListener('click', e => {
   if (e.target.classList.contains('overlay')) {
     e.target.classList.remove('show');
+    if (!document.querySelector('.overlay.show')) document.body.style.overflow = '';
   }
   /* Tombol close dengan data-close */
   if (e.target.dataset.close) closeModal(e.target.dataset.close);
@@ -82,5 +89,6 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     document.querySelectorAll('.overlay.show').forEach(m => m.classList.remove('show'));
+    document.body.style.overflow = '';
   }
 });
