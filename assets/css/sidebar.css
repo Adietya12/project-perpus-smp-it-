@@ -1,0 +1,260 @@
+/* ============================================================
+   SIDEBAR.CSS — Sidebar, Topbar, Main Layout
+   ============================================================ */
+
+/* ── LAYOUT ── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--black);
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  border-right: 1px solid var(--gray-800);
+}
+
+.sidebar-logo {
+  padding: 26px 20px 22px;
+  border-bottom: 1px solid var(--gray-800);
+}
+
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--white);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-icon svg {
+  width: 19px;
+  height: 19px;
+  stroke: var(--black);
+}
+
+.logo-text {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--white);
+  letter-spacing: -0.01em;
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: var(--gray-500);
+  margin-top: 1px;
+  letter-spacing: 0.04em;
+}
+
+/* ── NAV ── */
+.sidebar-nav {
+  flex: 1;
+  padding: 14px 12px;
+  overflow-y: auto;
+}
+
+.nav-group {
+  margin-bottom: 22px;
+}
+
+.nav-group-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray-600);
+  padding: 0 8px 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  color: var(--gray-400);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 400;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 1px;
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-item:hover {
+  background: var(--gray-800);
+  color: var(--white);
+}
+
+.nav-item.active {
+  background: var(--white);
+  color: var(--black);
+  font-weight: 500;
+}
+
+/* ── SIDEBAR FOOTER ── */
+.sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--gray-800);
+}
+
+.admin-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--black);
+  font-weight: 700;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.admin-name {
+  color: rgba(255,255,255,0.85);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.admin-role {
+  color: var(--gray-500);
+  font-size: 10.5px;
+}
+
+.btn-logout {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: none;
+  border: 1px solid var(--gray-700);
+  color: var(--gray-400);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-logout:hover {
+  background: var(--gray-800);
+  color: var(--white);
+  border-color: var(--gray-600);
+}
+
+/* ── MAIN ── */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--gray-400);
+}
+
+.breadcrumb svg {
+  stroke: var(--gray-300);
+  fill: none;
+  stroke-width: 2;
+}
+
+.breadcrumb span {
+  color: var(--black);
+  font-weight: 500;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar-date {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--gray-400);
+}
+
+/* ── PAGE CONTENT ── */
+.page-content {
+  padding: 28px 32px;
+  flex: 1;
+}
+
+/* ── PAGES ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── ALERT CONTAINER ── */
+#alert-container {
+  margin-bottom: 4px;
+}

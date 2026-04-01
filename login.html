@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Perpustakaan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/global.css" />
+  <link rel="stylesheet" href="assets/css/login.css" />
+</head>
+<body>
+
+  <!-- ══ KIRI: FORM ══ -->
+  <div class="left-panel">
+
+    <div class="left-logo">
+      <img src="assets/img/logo.jpg" alt="Logo SMPIT Anak Sholeh Mataram" class="logo-img" />
+      <span class="logo-text">Library</span>
+    </div>
+
+    <div class="left-body">
+
+      <!-- Form Login -->
+      <div id="login-form">
+        <div class="form-eyebrow">Administrator</div>
+        <h2 class="form-title">Masuk ke Akun</h2>
+        <p class="form-sub">Kelola perpustakaan Anda dari satu tempat</p>
+
+        <div class="error-box" id="error-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span id="error-msg">Username atau password salah.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="inp-user">Username</label>
+          <div class="input-wrap">
+            <input type="text" id="inp-user" placeholder="Masukkan username" autocomplete="username" />
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="inp-pass">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="inp-pass" placeholder="Masukkan password" autocomplete="current-password" />
+            <button class="toggle-pw" id="toggle-pw" type="button" tabindex="-1" aria-label="Tampilkan password">
+              <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="row-between">
+          <label class="remember">
+            <input type="checkbox" id="remember" /> Ingat saya
+          </label>
+          <a href="#" class="link" id="forgot-link">Lupa password?</a>
+        </div>
+
+        <button class="btn-login" id="btn-login" type="button">
+          <div class="spinner"></div>
+          <span class="btn-label">Masuk</span>
+        </button>
+
+        <div class="signup-row">
+          Belum punya akun? <a href="#" id="daftar-link">Daftar</a>
+        </div>
+
+        <div class="cred-hint">
+          <div class="cred-hint-label">Akun Demo</div>
+          <div class="cred-row">
+            <span>Username</span>
+            <span class="cred-val" id="hint-user">admin</span>
+          </div>
+          <div class="cred-row">
+            <span>Password</span>
+            <span class="cred-val" id="hint-pass">admin123</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success State -->
+      <div class="success-state" id="success-state">
+        <div class="success-check">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h3>Login Berhasil!</h3>
+        <p id="success-name">Selamat datang, Administrator</p>
+        <p class="redirect-note">Mengalihkan ke dashboard<span id="dots">...</span></p>
+        <button class="btn-back" onclick="location.reload()">← Kembali ke Login</button>
+      </div>
+
+    </div>
+
+    <div class="left-footer">
+      <button class="lang-btn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        Bahasa Indonesia
+      </button>
+      <div class="footer-links">
+        <a href="#">Syarat</a>
+        <a href="#">Privasi</a>
+        <a href="#">Bantuan</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ KANAN: FOTO SEKOLAH ══ -->
+  <div class="right-panel">
+    <img class="school-photo" src="assets/img/smpit.jpg" alt="SMPIT Anak Sholeh Mataram" />
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="right-content">
+
+      <h3 class="right-title">Perpustakaan</h3>
+      <p class="right-desc">
+        menumbuhkan <strong>ilmu</strong>, membangun <strong>akhlak</strong>
+      </p>
+
+    </div>
+  </div>
+
+  <script src="assets/js/login.js"></script>
+</body>
+</html>
