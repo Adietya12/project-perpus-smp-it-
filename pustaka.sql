@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS buku (
 -- ── Tabel Anggota ──
 CREATE TABLE IF NOT EXISTS anggota (
   id             INT AUTO_INCREMENT PRIMARY KEY,
-  nomor_anggota  VARCHAR(20)  NOT NULL UNIQUE,
+  nomor_anggota  VARCHAR(20)  UNIQUE,
   nama           VARCHAR(150) NOT NULL,
   email          VARCHAR(150),
   no_telepon     VARCHAR(20),

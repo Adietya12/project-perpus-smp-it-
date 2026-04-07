@@ -24,8 +24,8 @@ if ($method === 'GET') {
 /* ── POST: tambah buku ── */
 if ($method === 'POST') {
     $b = getBody();
-    if (!($b['kode_buku'] ?? '') || !($b['judul'] ?? '') || !($b['pengarang'] ?? '')) {
-        respond(false, 'Kode, judul, dan pengarang wajib diisi.', null, 400);
+    if (!($b['judul'] ?? '') || !($b['kategori'] ?? '') || !isset($b['stok'])) {
+        respond(false, 'Judul, kategori, dan stok wajib diisi.', null, 400);
     }
     $stok = (int)($b['stok'] ?? 0);
     $stmt = $db->prepare(

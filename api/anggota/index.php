@@ -22,8 +22,8 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     $a = getBody();
-    if (!($a['nomor_anggota'] ?? '') || !($a['nama'] ?? '')) {
-        respond(false, 'Nomor anggota dan nama wajib diisi.', null, 400);
+    if (!($a['nama'] ?? '')) {
+        respond(false, 'Nama anggota wajib diisi.', null, 400);
     }
     $status = $a['status'] ?? 'aktif';
     $stmt = $db->prepare(
@@ -58,6 +58,17 @@ if ($method === 'PUT') {
 
 if ($method === 'DELETE') {
     if (!$id) respond(false, 'ID diperlukan.', null, 400);
+    // Cek dulu apakah anggota punya transaksi
+    $cek = $db->prepare("SELECT COUNT(*) AS total FROM transaksi WHERE anggota_id = ?");
+    $cek->bind_param('i', $id);
+    $cek->execute();
+    $row = $cek->get_result()->fetch_assoc();
+    $cek->close();
+
+    if ($row['total'] > 0) {
+        respond(false, 'Anggota tidak bisa dihapus karena masih memiliki riwayat transaksi.', null, 400);
+    }
+
     $stmt = $db->prepare("DELETE FROM anggota WHERE id = ?");
     $stmt->bind_param('i', $id);
     $stmt->execute();

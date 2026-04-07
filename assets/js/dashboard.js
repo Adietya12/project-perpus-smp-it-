@@ -3,6 +3,128 @@
    ============================================ */
 "use strict";
 
+/* ── Searchable Select Utility ───────────────────────────────────── */
+/**
+ * Mengubah elemen display + hidden input menjadi dropdown yang bisa dicari.
+ * @param {Object} cfg - Konfigurasi komponen
+ */
+function initSearchableSelect(cfg) {
+  const wrap     = document.getElementById(cfg.wrapperId);
+  const display  = document.getElementById(cfg.displayId);
+  const labelEl  = document.getElementById(cfg.labelId);
+  const dropdown = document.getElementById(cfg.dropdownId);
+  const searchEl = document.getElementById(cfg.searchId);
+  const listEl   = document.getElementById(cfg.listId);
+  const hidden   = document.getElementById(cfg.hiddenId);
+  if (!wrap || !display || !dropdown || !searchEl || !listEl || !hidden) return;
+
+  // Simpan items ke elemen agar bisa di-re-render
+  wrap._ssItems = cfg.items || [];
+
+  function renderList(query) {
+    const q = (query || "").toLowerCase();
+    const filtered = wrap._ssItems.filter(item =>
+      item.label.toLowerCase().includes(q)
+    );
+    listEl.innerHTML = filtered.length
+      ? filtered.map(item =>
+          `<li data-value="${item.value}">${item.label}</li>`
+        ).join("")
+      : `<li class="empty">Tidak ada hasil</li>`;
+  }
+
+  function openDropdown() {
+    dropdown.style.display = "block";
+    display.classList.add("open");
+    searchEl.value = "";
+    renderList("");
+    searchEl.focus();
+  }
+
+  function closeDropdown() {
+    dropdown.style.display = "none";
+    display.classList.remove("open");
+  }
+
+  function selectItem(value, label) {
+    hidden.value = value;
+    labelEl.textContent = label;
+    labelEl.classList.remove("placeholder");
+    closeDropdown();
+    // Sembunyikan pesan error jika ada
+    const errA = document.getElementById("pinjam-anggota-error");
+    if (errA) errA.style.display = "none";
+  }
+
+  // Reset/re-init: hapus listener lama dgn clone
+  const newDisplay = display.cloneNode(true);
+  display.parentNode.replaceChild(newDisplay, display);
+  const newSearch  = searchEl.cloneNode(true);
+  searchEl.parentNode.replaceChild(newSearch, searchEl);
+  const newList    = listEl.cloneNode(false);
+  listEl.parentNode.replaceChild(newList, listEl);
+
+  const d  = document.getElementById(cfg.displayId);
+  const s  = document.getElementById(cfg.searchId);
+  const l  = document.getElementById(cfg.listId);
+  const lb = document.getElementById(cfg.labelId);
+
+  // Set placeholder
+  lb.textContent = hidden.value ? (wrap._ssItems.find(i => i.value == hidden.value) || {label: cfg.placeholder}).label : cfg.placeholder;
+  if (!hidden.value) lb.classList.add("placeholder");
+
+  d.addEventListener("click", () => {
+    const dd = document.getElementById(cfg.dropdownId);
+    dd.style.display === "none" ? openDropdownFresh() : closeFresh();
+  });
+
+  function openDropdownFresh() {
+    const dd = document.getElementById(cfg.dropdownId);
+    dd.style.display = "block";
+    d.classList.add("open");
+    s.value = "";
+    renderListFresh("");
+    s.focus();
+  }
+
+  function closeFresh() {
+    const dd = document.getElementById(cfg.dropdownId);
+    dd.style.display = "none";
+    d.classList.remove("open");
+  }
+
+  function renderListFresh(query) {
+    const q = (query || "").toLowerCase();
+    const filtered = wrap._ssItems.filter(item =>
+      item.label.toLowerCase().includes(q)
+    );
+    l.innerHTML = filtered.length
+      ? filtered.map(item =>
+          `<li data-value="${item.value}">${item.label}</li>`
+        ).join("")
+      : `<li class="empty">Tidak ada hasil</li>`;
+  }
+
+  s.addEventListener("input", () => renderListFresh(s.value));
+  s.addEventListener("keydown", (e) => e.stopPropagation());
+
+  l.addEventListener("click", (e) => {
+    const li = e.target.closest("li");
+    if (!li || li.classList.contains("empty")) return;
+    hidden.value = li.dataset.value;
+    lb.textContent = li.textContent;
+    lb.classList.remove("placeholder");
+    closeFresh();
+    const errA = document.getElementById("pinjam-anggota-error");
+    if (errA) errA.style.display = "none";
+  });
+
+  // Tutup saat klik di luar
+  document.addEventListener("click", (e) => {
+    if (!wrap.contains(e.target)) closeFresh();
+  }, { capture: false });
+}
+
 const PAGE_LABELS = {
   dashboard: "Dashboard",
   buku: "Manajemen Buku",
@@ -11,6 +133,7 @@ const PAGE_LABELS = {
   kembali: "Pengembalian",
   denda: "Denda",
   surat: "Surat Bebas Pinjam",
+  riwayat: "Riwayat Transaksi",
 };
 
 function navigateTo(pageId) {
@@ -38,6 +161,7 @@ function renderPage(pageId) {
     kembali: renderKembali,
     denda: renderDenda,
     surat: renderSurat,
+    riwayat: renderRiwayat,
   };
   if (map[pageId]) map[pageId]();
 }
@@ -118,19 +242,27 @@ function renderBuku() {
 
 async function simpanBuku() {
   const id = document.getElementById("buku-edit-id").value;
+  // Pakai native HTML validation
+  const fields = ["buku-judul", "buku-kategori", "buku-stok"];
+  let valid = true;
+  fields.forEach((fId) => {
+    const el = document.getElementById(fId);
+    if (!el.value.toString().trim()) {
+      el.reportValidity();
+      valid = false;
+    }
+  });
+  if (!valid) return;
+
   const obj = {
     kode_buku: document.getElementById("buku-kode").value.trim(),
     judul: document.getElementById("buku-judul").value.trim(),
     pengarang: document.getElementById("buku-pengarang").value.trim(),
     penerbit: document.getElementById("buku-penerbit").value.trim(),
-    tahun_terbit: document.getElementById("buku-tahun").value,
+    tahun_terbit: document.getElementById("buku-tahun").value || null,
     kategori: document.getElementById("buku-kategori").value.trim(),
     stok: +document.getElementById("buku-stok").value,
   };
-  if (!obj.kode_buku || !obj.judul || !obj.pengarang) {
-    showAlert("Kode, judul, dan pengarang wajib diisi.", "error");
-    return;
-  }
   const res = id ? await apiBukuUpdate(+id, obj) : await apiBukuCreate(obj);
   if (res.success) {
     showAlert(res.message);
@@ -205,18 +337,19 @@ function renderAnggota() {
 
 async function simpanAnggota() {
   const id = document.getElementById("anggota-edit-id").value;
+  const namaEl = document.getElementById("anggota-nama");
+  if (!namaEl.value.trim()) {
+    namaEl.reportValidity();
+    return;
+  }
   const obj = {
     nomor_anggota: document.getElementById("anggota-nomor").value.trim(),
-    nama: document.getElementById("anggota-nama").value.trim(),
+    nama: namaEl.value.trim(),
     email: document.getElementById("anggota-email").value.trim(),
     no_telepon: document.getElementById("anggota-telp").value.trim(),
     alamat: document.getElementById("anggota-alamat").value.trim(),
     status: document.getElementById("anggota-status").value,
   };
-  if (!obj.nomor_anggota || !obj.nama) {
-    showAlert("Nomor anggota dan nama wajib diisi.", "error");
-    return;
-  }
   const res = id
     ? await apiAnggotaUpdate(+id, obj)
     : await apiAnggotaCreate(obj);
@@ -269,6 +402,8 @@ function resetFormAnggota() {
 }
 
 /* ══════════════════════════════════════ PEMINJAMAN ══════════════════════════════════════ */
+let bukuDipilih = []; // array id buku yang akan dipinjam
+
 function renderPinjam() {
   const aktif = DB.transaksi.filter((t) => tStatus(t) === "dipinjam");
   document.getElementById("count-pinjam").textContent = aktif.length;
@@ -284,48 +419,130 @@ function renderPinjam() {
           <td>${terlambat ? '<span class="badge badge-red">Terlambat</span>' : '<span class="badge badge-yellow">Dipinjam</span>'}</td></tr>`;
         })
         .join("");
-  const selA = document.getElementById("pinjam-anggota");
-  selA.innerHTML =
-    '<option value="">-- Pilih Anggota --</option>' +
-    DB.anggota
+
+  // Populate searchable anggota
+  initSearchableSelect({
+    wrapperId:   "wrap-pinjam-anggota",
+    displayId:   "display-pinjam-anggota",
+    labelId:     "label-pinjam-anggota",
+    dropdownId:  "dropdown-pinjam-anggota",
+    searchId:    "search-pinjam-anggota",
+    listId:      "list-pinjam-anggota",
+    hiddenId:    "pinjam-anggota",
+    placeholder: "-- Pilih Anggota --",
+    items: DB.anggota
       .filter((a) => aStatus(a) === "aktif")
-      .map((a) => `<option value="${a.id}">${aNomor(a)} — ${aNama(a)}</option>`)
-      .join("");
-  const selB = document.getElementById("pinjam-buku");
-  selB.innerHTML =
-    '<option value="">-- Pilih Buku --</option>' +
-    DB.buku
-      .filter((b) => bTersedia(b) > 0)
-      .map(
-        (b) =>
-          `<option value="${b.id}">[${bKode(b)}] ${bJudul(b)} (stok: ${bTersedia(b)})</option>`,
-      )
-      .join("");
-  document.getElementById("pinjam-tgl").value = today();
-  document.getElementById("pinjam-batas").value = addDays(today(), 7);
+      .map((a) => ({ value: a.id, label: `${aNomor(a) || ""} — ${aNama(a)}` })),
+  });
+
+  // Populate searchable buku
+  renderSelectBukuPinjam();
+
+  // Reset daftar buku dipilih
+  bukuDipilih = [];
+  renderBukuDipilih();
+
+  // Set tanggal otomatis
+  const tglHariIni = today();
+  document.getElementById("pinjam-tgl").value = tglHariIni;
+  document.getElementById("pinjam-batas").value = addDays(tglHariIni, 14);
 }
+
+function renderSelectBukuPinjam() {
+  initSearchableSelect({
+    wrapperId:   "wrap-pinjam-buku-select",
+    displayId:   "display-pinjam-buku-select",
+    labelId:     "label-pinjam-buku-select",
+    dropdownId:  "dropdown-pinjam-buku-select",
+    searchId:    "search-pinjam-buku-select",
+    listId:      "list-pinjam-buku-select",
+    hiddenId:    "pinjam-buku-select",
+    placeholder: "-- Pilih Buku --",
+    items: DB.buku
+      .filter((b) => bTersedia(b) > 0 && !bukuDipilih.includes(b.id))
+      .map((b) => ({ value: b.id, label: `[${bKode(b)}] ${bJudul(b)} (stok: ${bTersedia(b)})` })),
+  });
+}
+
+function renderBukuDipilih() {
+  const wrap = document.getElementById("pinjam-buku-list");
+  if (!wrap) return;
+  if (!bukuDipilih.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+  wrap.innerHTML = bukuDipilih
+    .map((id) => {
+      const b = DB.buku.find((x) => x.id == id);
+      return `<div style="display:flex;align-items:center;gap:8px;background:#f5f5f5;padding:6px 10px;border-radius:6px">
+      <span style="flex:1;font-size:13px">[${bKode(b)}] ${bJudul(b)}</span>
+      <button type="button" onclick="hapusBukuPinjam(${id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;line-height:1">×</button>
+    </div>`;
+    })
+    .join("");
+}
+
+function tambahBukuPinjam() {
+  const hidden = document.getElementById("pinjam-buku-select");
+  const id = hidden ? +hidden.value : 0;
+  if (!id) return;
+  if (!bukuDipilih.includes(id)) {
+    bukuDipilih.push(id);
+    renderBukuDipilih();
+    renderSelectBukuPinjam();
+    document.getElementById("pinjam-buku-error").style.display = "none";
+  }
+  // Reset searchable select buku
+  hidden.value = "";
+  const lbl = document.getElementById("label-pinjam-buku-select");
+  if (lbl) { lbl.textContent = "-- Pilih Buku --"; lbl.classList.add("placeholder"); }
+}
+
+function hapusBukuPinjam(id) {
+  bukuDipilih = bukuDipilih.filter((x) => x !== id);
+  renderBukuDipilih();
+  renderSelectBukuPinjam();
+}
+
+// Auto update batas kembali saat tanggal pinjam berubah
+document.getElementById("pinjam-tgl")?.addEventListener("change", function () {
+  document.getElementById("pinjam-batas").value = addDays(this.value, 14);
+});
 
 async function simpanPinjam() {
   const anggotaId = document.getElementById("pinjam-anggota").value;
-  const bukuId = document.getElementById("pinjam-buku").value;
   const tglPinjam = document.getElementById("pinjam-tgl").value;
   const tglBatas = document.getElementById("pinjam-batas").value;
-  if (!anggotaId || !bukuId || !tglPinjam || !tglBatas) {
-    showAlert("Semua field wajib diisi.", "error");
+
+  // Validasi
+  if (!anggotaId) {
+    document.getElementById("pinjam-anggota-error").style.display = "block";
     return;
   }
-  const res = await apiPinjam({
-    anggota_id: +anggotaId,
-    buku_id: +bukuId,
-    tanggal_pinjam: tglPinjam,
-    tanggal_batas_kembali: tglBatas,
-  });
-  if (res.success) {
-    showAlert(res.message);
-    closeModal("modal-pinjam");
-    renderPinjam();
-    renderDashboard();
-  } else showAlert(res.message, "error");
+  if (!bukuDipilih.length) {
+    document.getElementById("pinjam-buku-error").style.display = "block";
+    return;
+  }
+
+  // Kirim 1 request per buku
+  let berhasil = 0,
+    gagal = [];
+  for (const bukuId of bukuDipilih) {
+    const res = await apiPinjam({
+      anggota_id: +anggotaId,
+      buku_id: bukuId,
+      tanggal_pinjam: tglPinjam,
+      tanggal_batas_kembali: tglBatas,
+    });
+    if (res.success) berhasil++;
+    else gagal.push(res.message);
+  }
+
+  closeModal("modal-pinjam");
+  if (berhasil > 0) showAlert(`${berhasil} buku berhasil dicatat peminjaman.`);
+  if (gagal.length) showAlert(gagal.join(" | "), "error");
+  renderPinjam();
+  renderDashboard();
 }
 
 /* ══════════════════════════════════════ PENGEMBALIAN ══════════════════════════════════════ */
@@ -557,3 +774,119 @@ document.getElementById("topbar-date").textContent =
 
 /* ── INIT ── */
 loadAllData().then(() => renderDashboard());
+
+/* ══════════════════════════════════════
+   RENDER RIWAYAT TRANSAKSI
+══════════════════════════════════════ */
+function renderRiwayat() {
+  // Isi dropdown bulan dari data transaksi
+  const bulanSet = new Set();
+  DB.transaksi.forEach((t) => {
+    if (t.tanggal_pinjam) bulanSet.add(t.tanggal_pinjam.slice(0, 7)); // YYYY-MM
+  });
+  const selBulan = document.getElementById("filter-bulan-riwayat");
+  const currentBulan = selBulan.value;
+  selBulan.innerHTML =
+    '<option value="">Semua Bulan</option>' +
+    [...bulanSet]
+      .sort()
+      .reverse()
+      .map((b) => {
+        const [y, m] = b.split("-");
+        const label = new Date(y, m - 1).toLocaleDateString("id-ID", {
+          month: "long",
+          year: "numeric",
+        });
+        return `<option value="${b}" ${b === currentBulan ? "selected" : ""}>${label}</option>`;
+      })
+      .join("");
+
+  filterRiwayat();
+}
+
+function filterRiwayat() {
+  const q = (
+    document.getElementById("search-riwayat")?.value || ""
+  ).toLowerCase();
+  const status = document.getElementById("filter-status-riwayat")?.value || "";
+  const bulan = document.getElementById("filter-bulan-riwayat")?.value || "";
+
+  let data = DB.transaksi.slice();
+
+  if (status) data = data.filter((t) => tStatus(t) === status);
+  if (bulan)
+    data = data.filter((t) => (t.tanggal_pinjam || "").startsWith(bulan));
+  if (q)
+    data = data.filter(
+      (t) =>
+        (t.nama_anggota || "").toLowerCase().includes(q) ||
+        (t.judul_buku || "").toLowerCase().includes(q) ||
+        (t.kode_transaksi || "").toLowerCase().includes(q) ||
+        (t.nomor_anggota || "").toLowerCase().includes(q),
+    );
+
+  document.getElementById("count-riwayat").textContent =
+    data.length + " transaksi";
+
+  const tbody = document.getElementById("tbl-riwayat");
+  if (!data.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="8" class="empty-cell">Tidak ada data yang cocok</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data
+    .map((t) => {
+      const terlambat =
+        tStatus(t) === "dikembalikan"
+          ? t.tanggal_kembali > tBatas(t)
+          : tBatas(t) < today();
+
+      // Cari denda untuk transaksi ini
+      const dendaTrx = DB.denda.find((d) => d.transaksi_id == t.id);
+      const dendaInfo = dendaTrx
+        ? `<span class="badge ${dStatus(dendaTrx) === "lunas" ? "badge-green" : "badge-red"}">${fRp(dJumlah(dendaTrx))}</span>`
+        : '<span style="color:#a3a3a3">—</span>';
+
+      const statusBadge =
+        tStatus(t) === "dipinjam"
+          ? terlambat
+            ? '<span class="badge badge-red">Terlambat</span>'
+            : '<span class="badge badge-yellow">Dipinjam</span>'
+          : '<span class="badge badge-green">Dikembalikan</span>';
+
+      return `<tr>
+      <td class="td-mono">${tKode(t)}</td>
+      <td><strong>${tNamaA(t) || "-"}</strong><br><span class="td-mono" style="font-size:11px">${t.nomor_anggota || ""}</span></td>
+      <td>${tJudulB(t) || "-"}</td>
+      <td>${fDate(tPinjam(t))}</td>
+      <td>${fDate(tBatas(t))}</td>
+      <td>${t.tanggal_kembali ? fDate(t.tanggal_kembali) : '<span style="color:#a3a3a3">Belum</span>'}</td>
+      <td>${dendaInfo}</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+    })
+    .join("");
+}
+
+function resetFilterRiwayat() {
+  document.getElementById("search-riwayat").value = "";
+  document.getElementById("filter-status-riwayat").value = "";
+  document.getElementById("filter-bulan-riwayat").value = "";
+  filterRiwayat();
+}
+
+// Tambah ke PAGE_LABELS dan renderPage
+PAGE_LABELS["riwayat"] = "Riwayat Transaksi";
+const _origRenderPage = renderPage;
+// Override renderPage sudah handle lewat map di dalam fungsi
+// Tambahkan event listener filter riwayat
+document
+  .getElementById("search-riwayat")
+  ?.addEventListener("input", filterRiwayat);
+document
+  .getElementById("filter-status-riwayat")
+  ?.addEventListener("change", filterRiwayat);
+document
+  .getElementById("filter-bulan-riwayat")
+  ?.addEventListener("change", filterRiwayat);
