@@ -625,16 +625,33 @@ function renderSurat() {
       .join("");
   const tbody = document.getElementById("tbl-surat");
   tbody.innerHTML = !DB.surat.length
-    ? '<tr><td colspan="4" class="empty-cell">Belum ada surat diterbitkan</td></tr>'
+    ? '<tr><td colspan="5" class="empty-cell">Belum ada surat diterbitkan</td></tr>'
     : DB.surat
         .map(
           (s) => `<tr>
         <td class="td-mono">${s.nomor_surat}</td><td>${s.nama_anggota || "-"}</td>
         <td>${fDate(s.tanggal)}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="previewSurat(${s.id})">Lihat</button></td>
+        <td><button class="btn btn-sm" style="color:#ef4444;border:1px solid #fca5a5;background:#fff5f5" onclick="hapusSurat(${s.id})">Hapus</button></td>
       </tr>`,
         )
         .join("");
+}
+
+async function hapusSurat(id) {
+  if (!confirm("Yakin ingin menghapus surat ini?")) return;
+  const res = await apiHapusSurat(id);
+  if (res.success) {
+    showAlert(res.message);
+    renderSurat();
+    // Sembunyikan preview jika surat yang dihapus sedang ditampilkan
+    const preview = document.getElementById("surat-preview");
+    if (preview && !preview.classList.contains("hidden")) {
+      preview.classList.add("hidden");
+    }
+  } else {
+    showAlert(res.message, "error");
+  }
 }
 
 async function cekStatusSurat() {

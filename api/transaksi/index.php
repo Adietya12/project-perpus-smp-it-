@@ -70,7 +70,21 @@ if ($method === 'POST' && $action === 'pinjam') {
     }
 }
 
-/* ── POST action=kembali: proses pengembalian ── */
+/* ── DELETE action=purge: hapus riwayat transaksi lebih dari 7 hari ── */
+if ($method === 'DELETE' && $action === 'purge') {
+    // Hanya hapus transaksi yang sudah dikembalikan dan lebih dari 7 hari
+    $stmt = $db->prepare(
+        "DELETE FROM transaksi
+         WHERE status = 'dikembalikan'
+           AND tanggal_kembali IS NOT NULL
+           AND tanggal_kembali < DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+    );
+    $stmt->execute();
+    $deleted = $stmt->affected_rows;
+    $stmt->close();
+    respond(true, "Purge selesai. $deleted transaksi dihapus.");
+}
+
 if ($method === 'POST' && $action === 'kembali') {
     $body        = getBody();
     $transaksiId = (int)($body['transaksi_id'] ?? 0);

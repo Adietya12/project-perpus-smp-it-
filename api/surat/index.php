@@ -55,3 +55,18 @@ if ($method === 'POST') {
 
     respond(true, "Surat $nomor berhasil diterbitkan.", $row, 201);
 }
+
+if ($method === 'DELETE') {
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    if (!$id) respond(false, 'ID surat diperlukan.', null, 400);
+
+    $stmt = $db->prepare("DELETE FROM surat_bebas WHERE id = ?");
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $affected = $stmt->affected_rows;
+    $stmt->close();
+
+    $affected
+        ? respond(true, 'Surat berhasil dihapus.')
+        : respond(false, 'Surat tidak ditemukan.', null, 404);
+}

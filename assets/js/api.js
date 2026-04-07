@@ -30,6 +30,9 @@ async function apiFetch(url, options = {}) {
 }
 
 async function loadAllData() {
+  // Auto-purge riwayat transaksi yang sudah lebih dari 7 hari
+  apiFetch("/transaksi/index.php?action=purge", { method: "DELETE" });
+
   const [resBuku, resAnggota, resTrx, resDenda, resSurat] = await Promise.all([
     apiFetch("/buku/index.php"),
     apiFetch("/anggota/index.php"),
@@ -152,5 +155,10 @@ async function apiBuatSurat(anggotaId) {
     const all = await apiFetch("/surat/index.php");
     if (all.success) DB.surat = all.data;
   }
+  return res;
+}
+async function apiHapusSurat(id) {
+  const res = await apiFetch(`/surat/index.php?id=${id}`, { method: "DELETE" });
+  if (res.success) DB.surat = DB.surat.filter((s) => s.id !== id);
   return res;
 }
