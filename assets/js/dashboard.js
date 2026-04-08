@@ -117,6 +117,8 @@ function initSearchableSelect(cfg) {
     closeFresh();
     const errA = document.getElementById("pinjam-anggota-error");
     if (errA) errA.style.display = "none";
+    // Panggil callback jika ada (untuk auto-tambah buku)
+    if (typeof cfg.onSelect === "function") cfg.onSelect(li.dataset.value, li.textContent);
   });
 
   // Tutup saat klik di luar
@@ -240,10 +242,22 @@ function renderBuku() {
         .join("");
 }
 
+function handleKategoriChange(sel) {
+  const input = document.getElementById("buku-kategori");
+  if (sel.value === "Lainnya") {
+    input.style.display = "block";
+    input.value = "";
+    input.focus();
+  } else {
+    input.style.display = "none";
+    input.value = sel.value;
+  }
+}
+
 async function simpanBuku() {
   const id = document.getElementById("buku-edit-id").value;
   // Pakai native HTML validation
-  const fields = ["buku-judul", "buku-kategori", "buku-stok"];
+  const fields = ["buku-judul", "buku-stok"];
   let valid = true;
   fields.forEach((fId) => {
     const el = document.getElementById(fId);
@@ -252,6 +266,15 @@ async function simpanBuku() {
       valid = false;
     }
   });
+  // Validasi kategori
+  const kategoriVal = document.getElementById("buku-kategori").value.trim();
+  const kategoriSel = document.getElementById("buku-kategori-select");
+  if (!kategoriVal) {
+    kategoriSel.reportValidity && kategoriSel.setCustomValidity("Pilih kategori terlebih dahulu");
+    kategoriSel.reportValidity();
+    kategoriSel.setCustomValidity("");
+    valid = false;
+  }
   if (!valid) return;
 
   const obj = {
@@ -282,7 +305,19 @@ function editBuku(id) {
   document.getElementById("buku-pengarang").value = b.pengarang;
   document.getElementById("buku-penerbit").value = b.penerbit;
   document.getElementById("buku-tahun").value = b.tahun_terbit;
-  document.getElementById("buku-kategori").value = b.kategori;
+  // Set dropdown kategori
+  const katSel = document.getElementById("buku-kategori-select");
+  const katInput = document.getElementById("buku-kategori");
+  const katOptions = Array.from(katSel.options).map(o => o.value);
+  if (katOptions.includes(b.kategori)) {
+    katSel.value = b.kategori;
+    katInput.value = b.kategori;
+    katInput.style.display = "none";
+  } else {
+    katSel.value = "Lainnya";
+    katInput.value = b.kategori;
+    katInput.style.display = "block";
+  }
   document.getElementById("buku-stok").value = b.stok;
   document.getElementById("modal-buku-title").textContent = "Edit Buku";
   openModal("modal-buku");
@@ -309,6 +344,10 @@ function resetFormBuku() {
   ].forEach((id) => {
     document.getElementById(id).value = "";
   });
+  const katSelReset = document.getElementById("buku-kategori-select");
+  if (katSelReset) katSelReset.value = "";
+  const katInputReset = document.getElementById("buku-kategori");
+  if (katInputReset) katInputReset.style.display = "none";
   document.getElementById("buku-stok").value = 1;
   document.getElementById("buku-tahun").value = new Date().getFullYear();
   document.getElementById("modal-buku-title").textContent = "Tambah Buku";
@@ -408,17 +447,35 @@ function renderPinjam() {
   const aktif = DB.transaksi.filter((t) => tStatus(t) === "dipinjam");
   document.getElementById("count-pinjam").textContent = aktif.length;
   const tbody = document.getElementById("tbl-pinjam");
-  tbody.innerHTML = !aktif.length
-    ? '<tr><td colspan="6" class="empty-cell">Tidak ada peminjaman aktif</td></tr>'
-    : aktif
-        .map((t) => {
-          const terlambat = tBatas(t) < today();
-          return `<tr><td class="td-mono">${tKode(t)}</td><td>${tNamaA(t) || "-"}</td><td>${tJudulB(t) || "-"}</td>
-          <td>${fDate(tPinjam(t))}</td>
-          <td>${fDate(tBatas(t))} ${terlambat ? '<span class="badge badge-red">Terlambat</span>' : ""}</td>
-          <td>${terlambat ? '<span class="badge badge-red">Terlambat</span>' : '<span class="badge badge-yellow">Dipinjam</span>'}</td></tr>`;
-        })
-        .join("");
+  if (!aktif.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Tidak ada peminjaman aktif</td></tr>';
+  } else {
+    // Kelompokkan per anggota agar buku dari anggota yg sama terlihat bersama
+    const grouped = {};
+    aktif.forEach((t) => {
+      const key = t.anggota_id + "_" + tPinjam(t) + "_" + tBatas(t);
+      if (!grouped[key]) grouped[key] = { t, buku: [] };
+      grouped[key].buku.push(tJudulB(t) || "-");
+    });
+    tbody.innerHTML = Object.values(grouped).map(({ t, buku }) => {
+      const terlambat = tBatas(t) < today();
+      const bukuCells = buku.map((j, i) =>
+        `<td style="vertical-align:middle">${j}</td>`
+      ).join("");
+      // Jika ada lebih dari 1 buku tampilkan sebagai badge-tag
+      const bukuDisplay = buku.length === 1
+        ? buku[0]
+        : buku.map(j => `<span style="display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px 2px 2px 0">${j}</span>`).join("");
+      return `<tr>
+        <td class="td-mono">${tKode(t)}</td>
+        <td>${tNamaA(t) || "-"}</td>
+        <td>${bukuDisplay}</td>
+        <td>${fDate(tPinjam(t))}</td>
+        <td>${fDate(tBatas(t))} ${terlambat ? '<span class="badge badge-red">Terlambat</span>' : ""}</td>
+        <td>${terlambat ? '<span class="badge badge-red">Terlambat</span>' : '<span class="badge badge-yellow">Dipinjam</span>'}</td>
+      </tr>`;
+    }).join("");
+  }
 
   // Populate searchable anggota
   initSearchableSelect({
@@ -457,10 +514,26 @@ function renderSelectBukuPinjam() {
     searchId:    "search-pinjam-buku-select",
     listId:      "list-pinjam-buku-select",
     hiddenId:    "pinjam-buku-select",
-    placeholder: "-- Pilih Buku --",
+    placeholder: "-- Pilih Buku (klik untuk menambah) --",
     items: DB.buku
       .filter((b) => bTersedia(b) > 0 && !bukuDipilih.includes(b.id))
       .map((b) => ({ value: b.id, label: `[${bKode(b)}] ${bJudul(b)} (stok: ${bTersedia(b)})` })),
+    onSelect: function(value) {
+      // Langsung tambah buku saat dipilih (tanpa klik tombol Tambah)
+      const id = +value;
+      if (!id) return;
+      if (!bukuDipilih.includes(id)) {
+        bukuDipilih.push(id);
+        renderBukuDipilih();
+        renderSelectBukuPinjam();
+        document.getElementById("pinjam-buku-error").style.display = "none";
+      }
+      // Reset display
+      const hidden = document.getElementById("pinjam-buku-select");
+      if (hidden) hidden.value = "";
+      const lbl = document.getElementById("label-pinjam-buku-select");
+      if (lbl) { lbl.textContent = "-- Pilih Buku (klik untuk menambah) --"; lbl.classList.add("placeholder"); }
+    }
   });
 }
 
@@ -549,40 +622,124 @@ async function simpanPinjam() {
 function renderKembali() {
   const aktif = DB.transaksi.filter((t) => tStatus(t) === "dipinjam");
   const tbody = document.getElementById("tbl-kembali");
-  tbody.innerHTML = !aktif.length
-    ? '<tr><td colspan="6" class="empty-cell">Tidak ada peminjaman aktif</td></tr>'
-    : aktif
-        .map((t) => {
-          const hari = Math.max(0, daysDiff(tBatas(t), today())),
-            denda = hari * DENDA_PER_HARI;
-          return `<tr><td class="td-mono">${tKode(t)}</td><td>${tNamaA(t) || "-"}</td><td>${tJudulB(t) || "-"}</td>
-          <td>${fDate(tBatas(t))}</td>
-          <td>${hari > 0 ? `<span class="badge badge-red">${hari} hari · ${fRp(denda)}</span>` : '<span class="badge badge-green">Tepat waktu</span>'}</td>
-          <td><button class="btn btn-primary btn-sm" onclick="prosesKembali(${t.id})">Proses Kembali</button></td></tr>`;
-        })
-        .join("");
+  if (!aktif.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Tidak ada peminjaman aktif</td></tr>';
+    return;
+  }
+  // Kelompokkan per sesi (anggota + tanggal pinjam + tanggal batas) — sama seperti renderPinjam
+  const grouped = {};
+  aktif.forEach((t) => {
+    const key = t.anggota_id + "_" + tPinjam(t) + "_" + tBatas(t);
+    if (!grouped[key]) grouped[key] = { t, buku: [] };
+    grouped[key].buku.push({ judul: tJudulB(t) || "-", id: t.id });
+  });
+  tbody.innerHTML = Object.values(grouped).map(({ t, buku }) => {
+    const hari = Math.max(0, daysDiff(tBatas(t), today()));
+    const denda = hari * DENDA_PER_HARI;
+    // Tampilkan buku sebagai badge jika lebih dari 1, teks biasa jika 1
+    const bukuDisplay = buku.length === 1
+      ? buku[0].judul
+      : buku.map(b => `<span style="display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px 2px 2px 0">${b.judul}</span>`).join("");
+    return `<tr>
+      <td class="td-mono">${tKode(t)}</td>
+      <td>${tNamaA(t) || "-"}</td>
+      <td>${bukuDisplay}</td>
+      <td>${fDate(tBatas(t))}</td>
+      <td>${hari > 0 ? `<span class="badge badge-red">${hari} hari · ${fRp(denda)}</span>` : '<span class="badge badge-green">Tepat waktu</span>'}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="prosesKembali(${t.id})">Proses Kembali</button></td>
+    </tr>`;
+  }).join("");
 }
 
-async function prosesKembali(id) {
+// ID transaksi yang sedang akan diproses kembali
+let _kembaliId = null;
+
+function prosesKembali(id) {
   const t = DB.transaksi.find((x) => x.id == id);
   if (!t) return;
-  const hari = Math.max(0, daysDiff(tBatas(t), today())),
-    denda = hari * DENDA_PER_HARI;
-  let msg = "Konfirmasi pengembalian buku ini?";
-  if (hari > 0) msg += `\n\nTerlambat ${hari} hari — Denda: ${fRp(denda)}`;
-  if (!confirm(msg)) return;
-  const res = await apiKembali(id);
-  if (res.success) {
+
+  // Cari semua buku yang dipinjam oleh anggota ini pada sesi yang sama
+  // (anggota_id + tanggal_pinjam + tanggal_batas_kembali sama)
+  const semuaBuku = DB.transaksi.filter(
+    (x) => x.anggota_id === t.anggota_id &&
+            x.tanggal_pinjam === t.tanggal_pinjam &&
+            x.tanggal_batas_kembali === t.tanggal_batas_kembali &&
+            tStatus(x) === "dipinjam"
+  );
+
+  const hari = Math.max(0, daysDiff(tBatas(t), today()));
+  const denda = hari * DENDA_PER_HARI;
+
+  // Isi modal
+  document.getElementById("kembali-nama-anggota").innerHTML =
+    `<strong>${tNamaA(t)}</strong> <span style="color:#6b7280;font-size:13px">${t.nomor_anggota || ""}</span>`;
+
+  const bukuList = document.getElementById("kembali-daftar-buku");
+  bukuList.innerHTML = semuaBuku.map((x) => {
+    const hariX = Math.max(0, daysDiff(x.tanggal_batas_kembali, today()));
+    return `<div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px">
+      <span style="font-size:18px">📖</span>
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:14px">${tJudulB(x) || "-"}</div>
+        <div style="font-size:12px;color:#6b7280">${x.kode_buku || ""} · Dipinjam ${fDate(x.tanggal_pinjam)}</div>
+      </div>
+      ${hariX > 0 ? `<span class="badge badge-red">${hariX} hari terlambat</span>` : '<span class="badge badge-green">Tepat waktu</span>'}
+    </div>`;
+  }).join("");
+
+  const dendaInfo = document.getElementById("kembali-info-denda");
+  if (hari > 0) {
+    dendaInfo.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;color:#92400e;font-size:13px">
+      ⚠️ Terlambat <strong>${hari} hari</strong> — Denda: <strong>${fRp(denda)}</strong>
+    </div>`;
+  } else {
+    dendaInfo.innerHTML = `<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:10px 14px;color:#166534;font-size:13px">
+      ✅ Pengembalian tepat waktu, tidak ada denda.
+    </div>`;
+  }
+
+  _kembaliId = id;
+  openModal("modal-kembali");
+}
+
+async function konfirmasiKembali() {
+  if (!_kembaliId) return;
+  const t = DB.transaksi.find((x) => x.id == _kembaliId);
+  if (!t) return;
+  const hari = Math.max(0, daysDiff(tBatas(t), today()));
+  const denda = hari * DENDA_PER_HARI;
+
+  // Kembalikan semua buku dalam sesi yang sama sekaligus
+  const semuaBuku = DB.transaksi.filter(
+    (x) => x.anggota_id === t.anggota_id &&
+            x.tanggal_pinjam === t.tanggal_pinjam &&
+            x.tanggal_batas_kembali === t.tanggal_batas_kembali &&
+            tStatus(x) === "dipinjam"
+  );
+
+  let berhasil = 0, gagal = [];
+  for (const x of semuaBuku) {
+    const res = await apiKembali(x.id);
+    if (res.success) berhasil++;
+    else gagal.push(res.message);
+  }
+
+  closeModal("modal-kembali");
+  _kembaliId = null;
+
+  if (berhasil > 0) {
     showAlert(
       hari > 0
-        ? `Buku dikembalikan. Denda ${fRp(denda)} (${hari} hari) dicatat.`
-        : "Buku berhasil dikembalikan tepat waktu.",
+        ? `${berhasil} buku dikembalikan. Denda ${fRp(denda)} (${hari} hari) dicatat.`
+        : `${berhasil} buku berhasil dikembalikan tepat waktu.`,
       hari > 0 ? "warn" : "success",
     );
-    renderKembali();
-    renderDenda();
-    renderDashboard();
-  } else showAlert(res.message, "error");
+  }
+  if (gagal.length) showAlert(gagal.join(" | "), "error");
+
+  renderKembali();
+  renderDenda();
+  renderDashboard();
 }
 
 /* ══════════════════════════════════════ DENDA ══════════════════════════════════════ */
@@ -758,6 +915,9 @@ document
 document
   .getElementById("btn-simpan-pinjam")
   ?.addEventListener("click", simpanPinjam);
+document
+  .getElementById("btn-konfirmasi-kembali")
+  ?.addEventListener("click", konfirmasiKembali);
 document.getElementById("btn-buat-surat")?.addEventListener("click", buatSurat);
 document
   .getElementById("surat-anggota")
@@ -842,48 +1002,70 @@ function filterRiwayat() {
         (t.nomor_anggota || "").toLowerCase().includes(q),
     );
 
+  // Kelompokkan per sesi (anggota + tanggal_pinjam + tanggal_batas_kembali)
+  const grouped = {};
+  data.forEach((t) => {
+    const key = t.anggota_id + "_" + tPinjam(t) + "_" + tBatas(t);
+    if (!grouped[key]) grouped[key] = { t, buku: [] };
+    grouped[key].buku.push(t);
+  });
+  const grupList = Object.values(grouped);
+
   document.getElementById("count-riwayat").textContent =
-    data.length + " transaksi";
+    grupList.length + " transaksi";
 
   const tbody = document.getElementById("tbl-riwayat");
-  if (!data.length) {
+  if (!grupList.length) {
     tbody.innerHTML =
       '<tr><td colspan="8" class="empty-cell">Tidak ada data yang cocok</td></tr>';
     return;
   }
 
-  tbody.innerHTML = data
-    .map((t) => {
-      const terlambat =
-        tStatus(t) === "dikembalikan"
-          ? t.tanggal_kembali > tBatas(t)
-          : tBatas(t) < today();
+  tbody.innerHTML = grupList.map(({ t, buku }) => {
+    const terlambat =
+      tStatus(t) === "dikembalikan"
+        ? t.tanggal_kembali > tBatas(t)
+        : tBatas(t) < today();
 
-      // Cari denda untuk transaksi ini
-      const dendaTrx = DB.denda.find((d) => d.transaksi_id == t.id);
-      const dendaInfo = dendaTrx
-        ? `<span class="badge ${dStatus(dendaTrx) === "lunas" ? "badge-green" : "badge-red"}">${fRp(dJumlah(dendaTrx))}</span>`
-        : '<span style="color:#a3a3a3">—</span>';
+    // Tampilkan buku sebagai badge jika lebih dari 1
+    const bukuDisplay = buku.length === 1
+      ? (tJudulB(buku[0]) || "-")
+      : buku.map(b => `<span style="display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px 2px 2px 0">${tJudulB(b) || "-"}</span>`).join("");
 
-      const statusBadge =
-        tStatus(t) === "dipinjam"
-          ? terlambat
-            ? '<span class="badge badge-red">Terlambat</span>'
-            : '<span class="badge badge-yellow">Dipinjam</span>'
-          : '<span class="badge badge-green">Dikembalikan</span>';
+    // Kumpulkan denda dari semua buku dalam sesi ini
+    const dendaList = buku
+      .map((b) => DB.denda.find((d) => d.transaksi_id == b.id))
+      .filter(Boolean);
+    let dendaInfo;
+    if (!dendaList.length) {
+      dendaInfo = '<span style="color:#a3a3a3">—</span>';
+    } else {
+      const totalDenda = dendaList.reduce((s, d) => s + dJumlah(d), 0);
+      const semuaLunas = dendaList.every((d) => dStatus(d) === "lunas");
+      dendaInfo = `<span class="badge ${semuaLunas ? "badge-green" : "badge-red"}">${fRp(totalDenda)}</span>`;
+    }
 
-      return `<tr>
+    const statusBadge =
+      tStatus(t) === "dipinjam"
+        ? terlambat
+          ? '<span class="badge badge-red">Terlambat</span>'
+          : '<span class="badge badge-yellow">Dipinjam</span>'
+        : '<span class="badge badge-green">Dikembalikan</span>';
+
+    // Tanggal kembali: ambil dari buku pertama yang sudah kembali
+    const tglKembali = buku.map(b => b.tanggal_kembali).filter(Boolean).sort().pop();
+
+    return `<tr>
       <td class="td-mono">${tKode(t)}</td>
       <td><strong>${tNamaA(t) || "-"}</strong><br><span class="td-mono" style="font-size:11px">${t.nomor_anggota || ""}</span></td>
-      <td>${tJudulB(t) || "-"}</td>
+      <td>${bukuDisplay}</td>
       <td>${fDate(tPinjam(t))}</td>
       <td>${fDate(tBatas(t))}</td>
-      <td>${t.tanggal_kembali ? fDate(t.tanggal_kembali) : '<span style="color:#a3a3a3">Belum</span>'}</td>
+      <td>${tglKembali ? fDate(tglKembali) : '<span style="color:#a3a3a3">Belum</span>'}</td>
       <td>${dendaInfo}</td>
       <td>${statusBadge}</td>
     </tr>`;
-    })
-    .join("");
+  }).join("");
 }
 
 function resetFilterRiwayat() {
