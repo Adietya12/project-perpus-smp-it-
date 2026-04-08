@@ -258,18 +258,18 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Transaksi Terbaru</div>
-                <div class="card-subtitle">10 transaksi terakhir</div>
+                <div class="card-title">Anggota Terbanyak Meminjam</div>
+                <div class="card-subtitle">Top 10 peminjam aktif</div>
               </div>
-              <button class="btn btn-ghost btn-sm" data-goto="pinjam">Lihat Semua</button>
+              <button class="btn btn-ghost btn-sm" data-goto="anggota">Lihat Semua</button>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Anggota</th><th>Buku</th><th>Status</th></tr>
+                  <tr><th>#</th><th>Anggota</th><th>Total Pinjam</th></tr>
                 </thead>
-                <tbody id="dash-transaksi">
-                  <tr><td colspan="3" class="empty-cell">Belum ada transaksi</td></tr>
+                <tbody id="dash-top-peminjam">
+                  <tr><td colspan="3" class="empty-cell">Belum ada data</td></tr>
                 </tbody>
               </table>
             </div>
@@ -277,39 +277,15 @@
 
           <div>
             <div class="card" style="margin-bottom:16px">
-              <div class="card-header"><div class="card-title">Aksi Cepat</div></div>
-              <div class="card-body">
-                <div class="quick-grid">
-                  <div class="quick-card" data-goto="pinjam">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    <h3>Catat Pinjam</h3>
-                    <p>Tambah transaksi baru</p>
-                  </div>
-                  <div class="quick-card" data-goto="kembali">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
-                    </svg>
-                    <h3>Catat Kembali</h3>
-                    <p>Proses pengembalian</p>
-                  </div>
-                  <div class="quick-card" data-goto="buku">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                    </svg>
-                    <h3>Tambah Buku</h3>
-                    <p>Input koleksi baru</p>
-                  </div>
-                  <div class="quick-card" data-goto="surat">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    <h3>Buat Surat</h3>
-                    <p>Surat bebas pinjam</p>
-                  </div>
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Grafik Peminjaman Harian</div>
+                  <div class="card-subtitle">7 hari terakhir</div>
+                </div>
+              </div>
+              <div class="card-body" style="padding-bottom:8px">
+                <div id="dash-chart-wrap" style="position:relative;width:100%;height:180px">
+                  <canvas id="dash-chart-harian"></canvas>
                 </div>
               </div>
             </div>
@@ -720,7 +696,10 @@
         <div id="modal-kembali-info" style="margin-bottom:16px">
           <div style="margin-bottom:8px;font-weight:600;color:#374151">Anggota</div>
           <div id="kembali-nama-anggota" style="font-size:15px;margin-bottom:16px"></div>
-          <div style="margin-bottom:8px;font-weight:600;color:#374151">Buku yang Dipinjam</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-weight:600;color:#374151">Pilih Buku yang Dikembalikan</div>
+            <button type="button" id="btn-pilih-semua-buku" style="font-size:12px;color:#3b82f6;background:none;border:none;cursor:pointer;padding:0">Pilih Semua</button>
+          </div>
           <div id="kembali-daftar-buku" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
           <div id="kembali-info-denda" style="margin-bottom:4px"></div>
         </div>
@@ -732,6 +711,7 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="../assets/js/api.js"></script>
   <script src="../assets/js/utils.js"></script>
   <script src="../assets/js/dashboard.js"></script>

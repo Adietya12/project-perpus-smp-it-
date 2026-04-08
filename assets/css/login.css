@@ -254,45 +254,7 @@ body {
 .signup-row a { color: var(--black); font-weight: 600; }
 .signup-row a:hover { text-decoration: underline; }
 
-/* Credential Hint */
-.cred-hint {
-  margin-top: 28px;
-  padding: 13px 16px;
-  background: var(--gray-50);
-  border: 1.5px dashed var(--gray-200);
-  border-radius: var(--radius-md);
-}
 
-.cred-hint-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gray-400);
-  margin-bottom: 8px;
-}
-
-.cred-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12.5px;
-  color: var(--gray-600);
-  padding: 3px 0;
-}
-
-.cred-val {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  background: var(--gray-100);
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: var(--black);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.cred-val:hover { background: var(--gray-200); }
 
 /* Success State */
 .success-state {
@@ -503,7 +465,6 @@ body {
   }
   .form-title { font-size: 24px; }
   .form-sub   { font-size: 13px; margin-bottom: 24px; }
-  .cred-hint  { margin-top: 20px; }
   .left-footer {
     flex-direction: column;
     align-items: flex-start;

@@ -136,6 +136,7 @@ const PAGE_LABELS = {
   denda: "Denda",
   surat: "Surat Bebas Pinjam",
   riwayat: "Riwayat Transaksi",
+  pengaturan: "Pengaturan Akun",
 };
 
 function navigateTo(pageId) {
@@ -186,6 +187,8 @@ const dJumlah = (d) => parseFloat(d.jumlah_denda),
   dHari = (d) => parseInt(d.hari_terlambat);
 
 /* ══════════════════════════════════════ DASHBOARD ══════════════════════════════════════ */
+let _chartHarian = null;
+
 function renderDashboard() {
   const dipinjam = DB.transaksi.filter((t) => tStatus(t) === "dipinjam");
   const terlambat = dipinjam.filter((t) => tBatas(t) < today());
@@ -198,18 +201,69 @@ function renderDashboard() {
   document.getElementById("stat-denda").textContent = fRp(totalDenda);
   document.getElementById("stat-terlambat-label").textContent =
     `↑ ${terlambat.length} terlambat`;
-  const tbody = document.getElementById("dash-transaksi");
-  const recent = DB.transaksi.slice(0, 10);
-  tbody.innerHTML = !recent.length
-    ? '<tr><td colspan="3" class="empty-cell">Belum ada transaksi</td></tr>'
-    : recent
-        .map((t) => {
-          const badge =
-            tStatus(t) === "dipinjam" ? "badge-yellow" : "badge-green";
-          const label = tStatus(t) === "dipinjam" ? "Dipinjam" : "Dikembalikan";
-          return `<tr><td>${tNamaA(t) || "-"}</td><td>${tJudulB(t) || "-"}</td><td><span class="badge ${badge}">${label}</span></td></tr>`;
-        })
-        .join("");
+
+  // ── Top Peminjam ──
+  const countMap = {};
+  DB.transaksi.forEach((t) => {
+    const key = t.anggota_id;
+    if (!key) return;
+    if (!countMap[key]) countMap[key] = { nama: tNamaA(t) || "-", nomor: t.nomor_anggota || "", total: 0 };
+    countMap[key].total++;
+  });
+  const topList = Object.values(countMap).sort((a, b) => b.total - a.total).slice(0, 10);
+  const topTbody = document.getElementById("dash-top-peminjam");
+  topTbody.innerHTML = !topList.length
+    ? '<tr><td colspan="3" class="empty-cell">Belum ada data</td></tr>'
+    : topList.map((a, i) => `<tr>
+        <td style="text-align:center;font-weight:700;color:${i < 3 ? "#f59e0b" : "#6b7280"}">${i + 1}</td>
+        <td><strong>${a.nama}</strong><br><span style="font-size:12px;color:#6b7280">${a.nomor}</span></td>
+        <td style="text-align:center"><span class="badge badge-yellow">${a.total} buku</span></td>
+      </tr>`).join("");
+
+  // ── Grafik Peminjaman 7 Hari Terakhir ──
+  const days = [];
+  const counts = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("id-ID", { weekday: "short", day: "2-digit" });
+    days.push(label);
+    counts.push(DB.transaksi.filter((t) => (t.tanggal_pinjam || "").startsWith(iso)).length);
+  }
+  const ctx = document.getElementById("dash-chart-harian")?.getContext("2d");
+  if (ctx) {
+    if (_chartHarian) _chartHarian.destroy();
+    _chartHarian = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: days,
+        datasets: [{
+          label: "Peminjaman",
+          data: counts,
+          backgroundColor: "rgba(59,130,246,0.7)",
+          borderColor: "rgba(59,130,246,1)",
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1, font: { size: 11 } },
+            grid: { color: "rgba(0,0,0,0.05)" }
+          },
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // ── Buku Terlambat ──
   const tbox = document.getElementById("dash-terlambat");
   tbox.innerHTML = !terlambat.length
     ? '<div class="empty-cell" style="padding:24px">Tidak ada keterlambatan</div>'
@@ -659,16 +713,12 @@ function prosesKembali(id) {
   if (!t) return;
 
   // Cari semua buku yang dipinjam oleh anggota ini pada sesi yang sama
-  // (anggota_id + tanggal_pinjam + tanggal_batas_kembali sama)
   const semuaBuku = DB.transaksi.filter(
     (x) => x.anggota_id === t.anggota_id &&
             x.tanggal_pinjam === t.tanggal_pinjam &&
             x.tanggal_batas_kembali === t.tanggal_batas_kembali &&
             tStatus(x) === "dipinjam"
   );
-
-  const hari = Math.max(0, daysDiff(tBatas(t), today()));
-  const denda = hari * DENDA_PER_HARI;
 
   // Isi modal
   document.getElementById("kembali-nama-anggota").innerHTML =
@@ -677,26 +727,55 @@ function prosesKembali(id) {
   const bukuList = document.getElementById("kembali-daftar-buku");
   bukuList.innerHTML = semuaBuku.map((x) => {
     const hariX = Math.max(0, daysDiff(x.tanggal_batas_kembali, today()));
-    return `<div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px">
+    const dendaX = hariX * DENDA_PER_HARI;
+    return `<label style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;cursor:pointer;transition:background .15s" class="kembali-buku-item">
+      <input type="checkbox" class="kembali-checkbox" data-id="${x.id}" data-hari="${hariX}" data-denda="${dendaX}"
+        style="width:16px;height:16px;accent-color:#3b82f6;flex-shrink:0" />
       <span style="font-size:18px">📖</span>
       <div style="flex:1">
         <div style="font-weight:500;font-size:14px">${tJudulB(x) || "-"}</div>
         <div style="font-size:12px;color:#6b7280">${x.kode_buku || ""} · Dipinjam ${fDate(x.tanggal_pinjam)}</div>
       </div>
-      ${hariX > 0 ? `<span class="badge badge-red">${hariX} hari terlambat</span>` : '<span class="badge badge-green">Tepat waktu</span>'}
-    </div>`;
+      ${hariX > 0
+        ? `<span class="badge badge-red">${hariX} hari · ${fRp(dendaX)}</span>`
+        : '<span class="badge badge-green">Tepat waktu</span>'}
+    </label>`;
   }).join("");
 
-  const dendaInfo = document.getElementById("kembali-info-denda");
-  if (hari > 0) {
-    dendaInfo.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;color:#92400e;font-size:13px">
-      ⚠️ Terlambat <strong>${hari} hari</strong> — Denda: <strong>${fRp(denda)}</strong>
-    </div>`;
-  } else {
-    dendaInfo.innerHTML = `<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:10px 14px;color:#166534;font-size:13px">
-      ✅ Pengembalian tepat waktu, tidak ada denda.
-    </div>`;
+  // Update info denda saat checkbox berubah
+  function updateDendaInfo() {
+    const checked = [...document.querySelectorAll(".kembali-checkbox:checked")];
+    const totalHari = checked.length ? Math.max(...checked.map(c => parseInt(c.dataset.hari))) : 0;
+    const totalDenda = checked.reduce((s, c) => s + parseInt(c.dataset.denda), 0);
+    const dendaInfo = document.getElementById("kembali-info-denda");
+    if (!checked.length) {
+      dendaInfo.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;color:#92400e;font-size:13px">⚠️ Pilih minimal 1 buku untuk dikembalikan.</div>`;
+    } else if (totalDenda > 0) {
+      dendaInfo.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;color:#92400e;font-size:13px">
+        ⚠️ ${checked.length} buku dipilih — Denda: <strong>${fRp(totalDenda)}</strong>
+      </div>`;
+    } else {
+      dendaInfo.innerHTML = `<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:10px 14px;color:#166534;font-size:13px">
+        ✅ ${checked.length} buku dipilih — Tepat waktu, tidak ada denda.
+      </div>`;
+    }
   }
+
+  bukuList.querySelectorAll(".kembali-checkbox").forEach(cb =>
+    cb.addEventListener("change", updateDendaInfo)
+  );
+  updateDendaInfo();
+
+  // Tombol pilih semua
+  const btnPilihSemua = document.getElementById("btn-pilih-semua-buku");
+  btnPilihSemua.onclick = () => {
+    const cbs = [...document.querySelectorAll(".kembali-checkbox")];
+    const semuaChecked = cbs.every(c => c.checked);
+    cbs.forEach(c => c.checked = !semuaChecked);
+    btnPilihSemua.textContent = semuaChecked ? "Pilih Semua" : "Batal Semua";
+    updateDendaInfo();
+  };
+  btnPilihSemua.textContent = "Pilih Semua";
 
   _kembaliId = id;
   openModal("modal-kembali");
@@ -704,22 +783,21 @@ function prosesKembali(id) {
 
 async function konfirmasiKembali() {
   if (!_kembaliId) return;
-  const t = DB.transaksi.find((x) => x.id == _kembaliId);
-  if (!t) return;
-  const hari = Math.max(0, daysDiff(tBatas(t), today()));
-  const denda = hari * DENDA_PER_HARI;
 
-  // Kembalikan semua buku dalam sesi yang sama sekaligus
-  const semuaBuku = DB.transaksi.filter(
-    (x) => x.anggota_id === t.anggota_id &&
-            x.tanggal_pinjam === t.tanggal_pinjam &&
-            x.tanggal_batas_kembali === t.tanggal_batas_kembali &&
-            tStatus(x) === "dipinjam"
-  );
+  // Ambil hanya buku yang di-centang
+  const checkedBoxes = [...document.querySelectorAll(".kembali-checkbox:checked")];
+  if (!checkedBoxes.length) {
+    showAlert("Pilih minimal 1 buku untuk dikembalikan.", "warn");
+    return;
+  }
+
+  const selectedIds = checkedBoxes.map(c => parseInt(c.dataset.id));
+  const totalDenda = checkedBoxes.reduce((s, c) => s + parseInt(c.dataset.denda), 0);
+  const maxHari = Math.max(...checkedBoxes.map(c => parseInt(c.dataset.hari)));
 
   let berhasil = 0, gagal = [];
-  for (const x of semuaBuku) {
-    const res = await apiKembali(x.id);
+  for (const xId of selectedIds) {
+    const res = await apiKembali(xId);
     if (res.success) berhasil++;
     else gagal.push(res.message);
   }
@@ -729,10 +807,10 @@ async function konfirmasiKembali() {
 
   if (berhasil > 0) {
     showAlert(
-      hari > 0
-        ? `${berhasil} buku dikembalikan. Denda ${fRp(denda)} (${hari} hari) dicatat.`
+      maxHari > 0
+        ? `${berhasil} buku dikembalikan. Denda ${fRp(totalDenda)} dicatat.`
         : `${berhasil} buku berhasil dikembalikan tepat waktu.`,
-      hari > 0 ? "warn" : "success",
+      maxHari > 0 ? "warn" : "success",
     );
   }
   if (gagal.length) showAlert(gagal.join(" | "), "error");
@@ -1002,14 +1080,22 @@ function filterRiwayat() {
         (t.nomor_anggota || "").toLowerCase().includes(q),
     );
 
-  // Kelompokkan per sesi (anggota + tanggal_pinjam + tanggal_batas_kembali)
-  const grouped = {};
+  // Pisahkan: buku yang sudah dikembalikan dikelompokkan per tanggal_kembali + anggota,
+  // buku yang masih dipinjam dikelompokkan per sesi (anggota + tanggal_pinjam + tanggal_batas_kembali)
+  const groups = {};
   data.forEach((t) => {
-    const key = t.anggota_id + "_" + tPinjam(t) + "_" + tBatas(t);
-    if (!grouped[key]) grouped[key] = { t, buku: [] };
-    grouped[key].buku.push(t);
+    let key;
+    if (tStatus(t) === "dikembalikan" && t.tanggal_kembali) {
+      // Kelompokkan per event pengembalian: anggota + tanggal_kembali
+      key = "kembali_" + t.anggota_id + "_" + t.tanggal_kembali;
+    } else {
+      // Masih dipinjam: kelompokkan per sesi peminjaman
+      key = "pinjam_" + t.anggota_id + "_" + tPinjam(t) + "_" + tBatas(t);
+    }
+    if (!groups[key]) groups[key] = { t, buku: [], isKembali: tStatus(t) === "dikembalikan" };
+    groups[key].buku.push(t);
   });
-  const grupList = Object.values(grouped);
+  const grupList = Object.values(groups);
 
   document.getElementById("count-riwayat").textContent =
     grupList.length + " transaksi";
@@ -1021,18 +1107,18 @@ function filterRiwayat() {
     return;
   }
 
-  tbody.innerHTML = grupList.map(({ t, buku }) => {
+  tbody.innerHTML = grupList.map(({ t, buku, isKembali }) => {
     const terlambat =
-      tStatus(t) === "dikembalikan"
-        ? t.tanggal_kembali > tBatas(t)
+      isKembali
+        ? buku.some(b => b.tanggal_kembali > tBatas(b))
         : tBatas(t) < today();
 
-    // Tampilkan buku sebagai badge jika lebih dari 1
+    // Tampilkan hanya buku yang relevan (sesuai event ini)
     const bukuDisplay = buku.length === 1
       ? (tJudulB(buku[0]) || "-")
       : buku.map(b => `<span style="display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px 2px 2px 0">${tJudulB(b) || "-"}</span>`).join("");
 
-    // Kumpulkan denda dari semua buku dalam sesi ini
+    // Kumpulkan denda dari buku-buku dalam event ini saja
     const dendaList = buku
       .map((b) => DB.denda.find((d) => d.transaksi_id == b.id))
       .filter(Boolean);
@@ -1046,14 +1132,16 @@ function filterRiwayat() {
     }
 
     const statusBadge =
-      tStatus(t) === "dipinjam"
+      !isKembali
         ? terlambat
           ? '<span class="badge badge-red">Terlambat</span>'
           : '<span class="badge badge-yellow">Dipinjam</span>'
         : '<span class="badge badge-green">Dikembalikan</span>';
 
-    // Tanggal kembali: ambil dari buku pertama yang sudah kembali
-    const tglKembali = buku.map(b => b.tanggal_kembali).filter(Boolean).sort().pop();
+    // Tanggal kembali: dari event pengembalian ini
+    const tglKembali = isKembali
+      ? buku.map(b => b.tanggal_kembali).filter(Boolean).sort().pop()
+      : null;
 
     return `<tr>
       <td class="td-mono">${tKode(t)}</td>
