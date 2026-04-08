@@ -1034,10 +1034,10 @@ loadAllData().then(() => renderDashboard());
    RENDER RIWAYAT TRANSAKSI
 ══════════════════════════════════════ */
 function renderRiwayat() {
-  // Isi dropdown bulan dari data transaksi
+  // Isi dropdown bulan dari tanggal_kembali (hanya yang sudah dikembalikan)
   const bulanSet = new Set();
   DB.transaksi.forEach((t) => {
-    if (t.tanggal_pinjam) bulanSet.add(t.tanggal_pinjam.slice(0, 7)); // YYYY-MM
+    if (t.tanggal_kembali) bulanSet.add(t.tanggal_kembali.slice(0, 7)); // YYYY-MM
   });
   const selBulan = document.getElementById("filter-bulan-riwayat");
   const currentBulan = selBulan.value;
@@ -1063,14 +1063,13 @@ function filterRiwayat() {
   const q = (
     document.getElementById("search-riwayat")?.value || ""
   ).toLowerCase();
-  const status = document.getElementById("filter-status-riwayat")?.value || "";
   const bulan = document.getElementById("filter-bulan-riwayat")?.value || "";
 
-  let data = DB.transaksi.slice();
+  // Riwayat hanya menampilkan transaksi yang sudah dikembalikan
+  let data = DB.transaksi.filter((t) => tStatus(t) === "dikembalikan");
 
-  if (status) data = data.filter((t) => tStatus(t) === status);
   if (bulan)
-    data = data.filter((t) => (t.tanggal_pinjam || "").startsWith(bulan));
+    data = data.filter((t) => (t.tanggal_kembali || "").startsWith(bulan));
   if (q)
     data = data.filter(
       (t) =>
@@ -1158,7 +1157,6 @@ function filterRiwayat() {
 
 function resetFilterRiwayat() {
   document.getElementById("search-riwayat").value = "";
-  document.getElementById("filter-status-riwayat").value = "";
   document.getElementById("filter-bulan-riwayat").value = "";
   filterRiwayat();
 }
@@ -1171,9 +1169,6 @@ const _origRenderPage = renderPage;
 document
   .getElementById("search-riwayat")
   ?.addEventListener("input", filterRiwayat);
-document
-  .getElementById("filter-status-riwayat")
-  ?.addEventListener("change", filterRiwayat);
 document
   .getElementById("filter-bulan-riwayat")
   ?.addEventListener("change", filterRiwayat);

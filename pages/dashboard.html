@@ -481,12 +481,11 @@
       <!-- ══ RIWAYAT TRANSAKSI ══ -->
       <div class="page" id="page-riwayat">
         <div class="page-header">
-          <div><h1>Riwayat Transaksi</h1><p>Semua riwayat peminjaman dan pengembalian buku</p></div>
+          <div><h1>Riwayat Transaksi</h1><p>Daftar buku yang telah dikembalikan</p></div>
         </div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
             <input type="text" id="search-riwayat" placeholder="Cari nama, buku, kode..." style="flex:1;min-width:200px">
-            <select id="filter-status-riwayat" style="width:180px"><option value="">Semua Status</option><option value="dipinjam">Dipinjam</option><option value="dikembalikan">Dikembalikan</option></select>
             <select id="filter-bulan-riwayat" style="width:160px"><option value="">Semua Bulan</option></select>
             <button class="btn btn-ghost btn-sm" onclick="resetFilterRiwayat()">Reset Filter</button>
             <span id="count-riwayat" class="badge badge-gray" style="font-size:13px"></span>
