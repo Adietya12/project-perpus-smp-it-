@@ -119,7 +119,7 @@
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          Denda
+          Sanksi
         </button>
       </div>
 
@@ -206,7 +206,7 @@
         <div class="page-header">
           <div>
             <h1>Dashboard</h1>
-            <p>Selamat datang di sistem informasi perpustakaan</p>
+            <p>Selamat Datang di Perpustakaan SMP IT Anak Sholeh Mataram</p>
           </div>
         </div>
 
@@ -249,8 +249,8 @@
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
             </div>
-            <div class="stat-value stat-value--sm" id="stat-denda">Rp 0</div>
-            <div class="stat-label">Denda Belum Lunas</div>
+            <div class="stat-value" id="stat-denda">0</div>
+            <div class="stat-label">Anggota Kena Sanksi</div>
           </div>
         </div>
 
@@ -291,7 +291,10 @@
             </div>
 
             <div class="card">
-              <div class="card-header"><div class="card-title">Buku Terlambat</div></div>
+              <div class="card-header">
+                <div class="card-title">Buku Terlambat</div>
+                <button class="btn btn-ghost btn-sm" data-goto="pinjam">Lihat Semua</button>
+              </div>
               <div id="dash-terlambat">
                 <div class="empty-cell" style="padding:24px;text-align:center">Tidak ada keterlambatan</div>
               </div>
@@ -417,7 +420,7 @@
       <!-- ══ DENDA ══ -->
       <div class="page" id="page-denda">
         <div class="page-header">
-          <div><h1>Denda</h1><p>Kelola denda keterlambatan — Rp 1.000/hari</p></div>
+          <div><h1>Sanksi</h1><p>Kelola sanksi larangan meminjam akibat keterlambatan</p></div>
         </div>
         <div class="card">
           <div class="card-header">
@@ -431,7 +434,7 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Anggota</th><th>Buku</th><th>Terlambat</th><th>Jumlah Denda</th><th>Status</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>Anggota</th><th>Buku</th><th>Keterlambatan</th><th>Sanksi</th><th>Status</th><th>Aksi</th></tr></thead>
               <tbody id="tbl-denda"></tbody>
             </table>
           </div>
@@ -492,7 +495,7 @@
           </div>
         </div>
         <div class="card"><div class="card-body" style="padding:0">
-          <table><thead><tr><th>Kode</th><th>Anggota</th><th>Buku</th><th>Tgl Pinjam</th><th>Batas Kembali</th><th>Tgl Kembali</th><th>Denda</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>Kode</th><th>Anggota</th><th>Buku</th><th>Tgl Pinjam</th><th>Batas Kembali</th><th>Tgl Kembali</th><th>Sanksi</th><th>Status</th></tr></thead>
           <tbody id="tbl-riwayat"><tr><td colspan="8" class="empty-cell">Memuat data...</td></tr></tbody></table>
         </div></div>
       </div>
@@ -733,6 +736,12 @@
 
     hamburgerBtn.addEventListener('click', openSidebar);
     overlay.addEventListener('click', closeSidebar);
+
+    // Tombol data-goto (navigasi dari dashboard card)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-goto]');
+      if (btn) navigateTo(btn.dataset.goto);
+    });
 
     // Tutup sidebar saat nav item diklik (mobile)
     document.querySelectorAll('.nav-item').forEach(item => {

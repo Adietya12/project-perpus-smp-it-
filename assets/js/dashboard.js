@@ -100,7 +100,9 @@ function initSearchableSelect(cfg) {
     );
     l.innerHTML = filtered.length
       ? filtered.map(item =>
-          `<li data-value="${item.value}">${item.label}</li>`
+          item.disabled
+            ? `<li data-value="${item.value}" class="disabled" style="color:#ef4444;cursor:not-allowed;opacity:0.7">${item.label}</li>`
+            : `<li data-value="${item.value}">${item.label}</li>`
         ).join("")
       : `<li class="empty">Tidak ada hasil</li>`;
   }
@@ -110,7 +112,7 @@ function initSearchableSelect(cfg) {
 
   l.addEventListener("click", (e) => {
     const li = e.target.closest("li");
-    if (!li || li.classList.contains("empty")) return;
+    if (!li || li.classList.contains("empty") || li.classList.contains("disabled")) return;
     hidden.value = li.dataset.value;
     lb.textContent = li.textContent;
     lb.classList.remove("placeholder");
@@ -133,37 +135,90 @@ const PAGE_LABELS = {
   anggota: "Manajemen Anggota",
   pinjam: "Peminjaman",
   kembali: "Pengembalian",
-  denda: "Denda",
+  denda: "Sanksi",
   surat: "Surat Bebas Pinjam",
   riwayat: "Riwayat Transaksi",
   pengaturan: "Pengaturan Akun",
 };
 
 function navigateTo(pageId) {
-  document
-    .querySelectorAll(".page")
-    .forEach((p) => p.classList.remove("active"));
-  document
-    .querySelectorAll(".nav-item")
-    .forEach((n) => n.classList.remove("active"));
-  const page = document.getElementById("page-" + pageId);
-  if (page) page.classList.add("active");
-  const navBtn = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-  if (navBtn) navBtn.classList.add("active");
-  document.getElementById("breadcrumb-label").textContent =
-    PAGE_LABELS[pageId] || pageId;
-  renderPage(pageId);
+  // Fade out current active page
+  const currentPage = document.querySelector(".page.active");
+  if (currentPage) {
+    currentPage.style.transition = "opacity 0.18s ease, transform 0.18s ease";
+    currentPage.style.opacity = "0";
+    currentPage.style.transform = "translateY(8px)";
+  }
+
+  setTimeout(() => {
+    document
+      .querySelectorAll(".page")
+      .forEach((p) => {
+        p.classList.remove("active");
+        p.style.opacity = "";
+        p.style.transform = "";
+        p.style.transition = "";
+      });
+    document
+      .querySelectorAll(".nav-item")
+      .forEach((n) => n.classList.remove("active"));
+    const page = document.getElementById("page-" + pageId);
+    if (page) {
+      page.classList.add("active");
+      // Fade in new page
+      page.style.opacity = "0";
+      page.style.transform = "translateY(10px)";
+      page.style.transition = "opacity 0.28s ease, transform 0.28s ease";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          page.style.opacity = "1";
+          page.style.transform = "translateY(0)";
+        });
+      });
+      setTimeout(() => {
+        page.style.transition = "";
+        page.style.opacity = "";
+        page.style.transform = "";
+      }, 350);
+    }
+    const navBtn = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+    if (navBtn) navBtn.classList.add("active");
+    document.getElementById("breadcrumb-label").textContent =
+      PAGE_LABELS[pageId] || pageId;
+    renderPage(pageId);
+  }, currentPage ? 160 : 0);
 }
 
 function renderPage(pageId) {
+  // Untuk halaman sanksi dan surat, refresh dulu dari server agar data selalu terkini
+  if (pageId === "denda") {
+    apiFetch("/denda/index.php").then((res) => {
+      if (res.success) DB.denda = res.data;
+      renderDenda();
+      renderDashboard();
+    });
+    return;
+  }
+  if (pageId === "surat") {
+    Promise.all([
+      apiFetch("/transaksi/index.php"),
+      apiFetch("/denda/index.php"),
+      apiFetch("/surat/index.php"),
+    ]).then(([trx, denda, surat]) => {
+      if (trx.success)   DB.transaksi = trx.data;
+      if (denda.success) DB.denda     = denda.data;
+      if (surat.success) DB.surat     = surat.data;
+      renderSurat();
+    });
+    return;
+  }
+
   const map = {
     dashboard: renderDashboard,
     buku: renderBuku,
     anggota: renderAnggota,
     pinjam: renderPinjam,
     kembali: renderKembali,
-    denda: renderDenda,
-    surat: renderSurat,
     riwayat: renderRiwayat,
   };
   if (map[pageId]) map[pageId]();
@@ -195,10 +250,30 @@ function renderDashboard() {
   const totalDenda = DB.denda
     .filter((d) => dStatus(d) === "belum")
     .reduce((s, d) => s + dJumlah(d), 0);
-  document.getElementById("stat-buku").textContent = DB.buku.length;
-  document.getElementById("stat-anggota").textContent = DB.anggota.length;
-  document.getElementById("stat-pinjam").textContent = dipinjam.length;
-  document.getElementById("stat-denda").textContent = fRp(totalDenda);
+  // Hitung anggota yang masih kena sanksi (denda belum selesai)
+  const anggotaSanksi = new Set(
+    DB.denda.filter((d) => dStatus(d) === "belum").map((d) => d.anggota_id)
+  ).size;
+  // Animated counter helper
+  function animateCount(el, target, isRp = false) {
+    if (!el) return;
+    const duration = 700;
+    const start = performance.now();
+    function step(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const val = Math.round(target * eased);
+      el.textContent = isRp ? fRp(val) : val;
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = isRp ? fRp(target) : target;
+    }
+    requestAnimationFrame(step);
+  }
+  animateCount(document.getElementById("stat-buku"), DB.buku.length);
+  animateCount(document.getElementById("stat-anggota"), DB.anggota.length);
+  animateCount(document.getElementById("stat-pinjam"), dipinjam.length);
+  animateCount(document.getElementById("stat-denda"), anggotaSanksi);
   document.getElementById("stat-terlambat-label").textContent =
     `↑ ${terlambat.length} terlambat`;
 
@@ -270,7 +345,7 @@ function renderDashboard() {
     : terlambat
         .map((t) => {
           const hari = daysDiff(tBatas(t), today());
-          return `<div class="activity-item"><div class="activity-dot red"></div><div class="activity-text"><strong>${tNamaA(t)}</strong> — ${tJudulB(t)}</div><span class="badge badge-red">${hari} hari</span></div>`;
+          return `<div class="activity-item"><div class="activity-dot red"></div><div class="activity-text"><strong>${tNamaA(t)}</strong> — ${tJudulB(t)}</div><span class="badge badge-red">telat ${hari} hari</span></div>`;
         })
         .join("");
 }
@@ -543,7 +618,14 @@ function renderPinjam() {
     placeholder: "-- Pilih Anggota --",
     items: DB.anggota
       .filter((a) => aStatus(a) === "aktif")
-      .map((a) => ({ value: a.id, label: `${aNomor(a) || ""} — ${aNama(a)}` })),
+      .map((a) => {
+        const sanksi = DB.denda.filter((d) => d.anggota_id == a.id && dStatus(d) === "belum");
+        const maxHari = sanksi.length ? Math.max(...sanksi.map((d) => dHari(d))) : 0;
+        const label = maxHari > 0
+          ? `${aNomor(a) || ""} — ${aNama(a)} ⚠️ sanksi ${maxHari} hari`
+          : `${aNomor(a) || ""} — ${aNama(a)}`;
+        return { value: a.id, label, disabled: maxHari > 0 };
+      }),
   });
 
   // Populate searchable buku
@@ -651,6 +733,19 @@ async function simpanPinjam() {
     return;
   }
 
+  // Cek sanksi larangan meminjam
+  const sanksiAnggota = DB.denda.filter(
+    (d) => d.anggota_id == +anggotaId && dStatus(d) === "belum"
+  );
+  if (sanksiAnggota.length) {
+    const maxHari = Math.max(...sanksiAnggota.map((d) => dHari(d)));
+    showAlert(
+      `Anggota ini masih kena sanksi larangan meminjam selama ${maxHari} hari. Selesaikan sanksi terlebih dahulu di menu Denda.`,
+      "error"
+    );
+    return;
+  }
+
   // Kirim 1 request per buku
   let berhasil = 0,
     gagal = [];
@@ -689,7 +784,6 @@ function renderKembali() {
   });
   tbody.innerHTML = Object.values(grouped).map(({ t, buku }) => {
     const hari = Math.max(0, daysDiff(tBatas(t), today()));
-    const denda = hari * DENDA_PER_HARI;
     // Tampilkan buku sebagai badge jika lebih dari 1, teks biasa jika 1
     const bukuDisplay = buku.length === 1
       ? buku[0].judul
@@ -699,7 +793,7 @@ function renderKembali() {
       <td>${tNamaA(t) || "-"}</td>
       <td>${bukuDisplay}</td>
       <td>${fDate(tBatas(t))}</td>
-      <td>${hari > 0 ? `<span class="badge badge-red">${hari} hari · ${fRp(denda)}</span>` : '<span class="badge badge-green">Tepat waktu</span>'}</td>
+      <td>${hari > 0 ? `<span class="badge badge-red">telat ${hari} hari</span>` : '<span class="badge badge-green">Tepat waktu</span>'}</td>
       <td><button class="btn btn-primary btn-sm" onclick="prosesKembali(${t.id})">Proses Kembali</button></td>
     </tr>`;
   }).join("");
@@ -727,9 +821,8 @@ function prosesKembali(id) {
   const bukuList = document.getElementById("kembali-daftar-buku");
   bukuList.innerHTML = semuaBuku.map((x) => {
     const hariX = Math.max(0, daysDiff(x.tanggal_batas_kembali, today()));
-    const dendaX = hariX * DENDA_PER_HARI;
     return `<label style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;cursor:pointer;transition:background .15s" class="kembali-buku-item">
-      <input type="checkbox" class="kembali-checkbox" data-id="${x.id}" data-hari="${hariX}" data-denda="${dendaX}"
+      <input type="checkbox" class="kembali-checkbox" data-id="${x.id}" data-hari="${hariX}"
         style="width:16px;height:16px;accent-color:#3b82f6;flex-shrink:0" />
       <span style="font-size:18px">📖</span>
       <div style="flex:1">
@@ -737,26 +830,25 @@ function prosesKembali(id) {
         <div style="font-size:12px;color:#6b7280">${x.kode_buku || ""} · Dipinjam ${fDate(x.tanggal_pinjam)}</div>
       </div>
       ${hariX > 0
-        ? `<span class="badge badge-red">${hariX} hari · ${fRp(dendaX)}</span>`
+        ? `<span class="badge badge-red">telat ${hariX} hari</span>`
         : '<span class="badge badge-green">Tepat waktu</span>'}
     </label>`;
   }).join("");
 
-  // Update info denda saat checkbox berubah
+  // Update info sanksi saat checkbox berubah
   function updateDendaInfo() {
     const checked = [...document.querySelectorAll(".kembali-checkbox:checked")];
-    const totalHari = checked.length ? Math.max(...checked.map(c => parseInt(c.dataset.hari))) : 0;
-    const totalDenda = checked.reduce((s, c) => s + parseInt(c.dataset.denda), 0);
+    const maxHariChecked = checked.length ? Math.max(...checked.map(c => parseInt(c.dataset.hari))) : 0;
     const dendaInfo = document.getElementById("kembali-info-denda");
     if (!checked.length) {
       dendaInfo.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;color:#92400e;font-size:13px">⚠️ Pilih minimal 1 buku untuk dikembalikan.</div>`;
-    } else if (totalDenda > 0) {
+    } else if (maxHariChecked > 0) {
       dendaInfo.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;color:#92400e;font-size:13px">
-        ⚠️ ${checked.length} buku dipilih — Denda: <strong>${fRp(totalDenda)}</strong>
+        ⚠️ ${checked.length} buku dipilih — Sanksi: <strong>${maxHariChecked} hari larangan meminjam</strong>
       </div>`;
     } else {
       dendaInfo.innerHTML = `<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:10px 14px;color:#166534;font-size:13px">
-        ✅ ${checked.length} buku dipilih — Tepat waktu, tidak ada denda.
+        ✅ ${checked.length} buku dipilih — Tepat waktu, tidak ada sanksi.
       </div>`;
     }
   }
@@ -792,7 +884,6 @@ async function konfirmasiKembali() {
   }
 
   const selectedIds = checkedBoxes.map(c => parseInt(c.dataset.id));
-  const totalDenda = checkedBoxes.reduce((s, c) => s + parseInt(c.dataset.denda), 0);
   const maxHari = Math.max(...checkedBoxes.map(c => parseInt(c.dataset.hari)));
 
   let berhasil = 0, gagal = [];
@@ -808,7 +899,7 @@ async function konfirmasiKembali() {
   if (berhasil > 0) {
     showAlert(
       maxHari > 0
-        ? `${berhasil} buku dikembalikan. Denda ${fRp(totalDenda)} dicatat.`
+        ? `${berhasil} buku dikembalikan. Sanksi larangan meminjam ${maxHari} hari dicatat.`
         : `${berhasil} buku berhasil dikembalikan tepat waktu.`,
       maxHari > 0 ? "warn" : "success",
     );
@@ -825,15 +916,15 @@ function renderDenda() {
   document.getElementById("count-denda").textContent = DB.denda.length;
   const tbody = document.getElementById("tbl-denda");
   tbody.innerHTML = !DB.denda.length
-    ? '<tr><td colspan="6" class="empty-cell">Belum ada data denda</td></tr>'
+    ? '<tr><td colspan="6" class="empty-cell">Belum ada data sanksi</td></tr>'
     : DB.denda
         .map(
           (d) => `<tr>
         <td><strong>${d.nama_anggota || "-"}</strong><br><span class="td-mono">${d.nomor_anggota || ""}</span></td>
-        <td>${d.judul_buku || "-"}</td><td>${dHari(d)} hari</td>
-        <td><span class="denda-big">${fRp(dJumlah(d))}</span></td>
-        <td>${dStatus(d) === "lunas" ? '<span class="badge badge-green">Lunas</span>' : '<span class="badge badge-red">Belum Bayar</span>'}</td>
-        <td>${dStatus(d) === "belum" ? `<button class="btn btn-primary btn-sm" onclick="bayarDenda(${d.id})">Tandai Lunas</button>` : "—"}</td>
+        <td>${d.judul_buku || "-"}</td><td>telat ${dHari(d)} hari</td>
+        <td><span class="denda-big" style="font-size:15px;color:#dc2626">${dHari(d)} hari larangan meminjam</span></td>
+        <td>${dStatus(d) === "lunas" ? '<span class="badge badge-green">Selesai</span>' : '<span class="badge badge-red">Aktif</span>'}</td>
+        <td>${dStatus(d) === "belum" ? `<button class="btn btn-primary btn-sm" onclick="bayarDenda(${d.id})">Tandai Selesai</button>` : "—"}</td>
       </tr>`,
         )
         .join("");
@@ -841,7 +932,7 @@ function renderDenda() {
 
 async function bayarDenda(id) {
   const d = DB.denda.find((x) => x.id == id);
-  if (!d || !confirm(`Tandai denda ${fRp(dJumlah(d))} sebagai lunas?`)) return;
+  if (!d || !confirm(`Tandai sanksi ${dHari(d)} hari untuk ${d.nama_anggota || "anggota ini"} sebagai selesai?`)) return;
   const res = await apiBayarDenda(id);
   if (res.success) {
     showAlert(res.message);
@@ -899,18 +990,19 @@ async function cekStatusSurat() {
     btn.disabled = true;
     return;
   }
+  // Gunakan == (loose equality) agar anggota_id dari API (string) cocok dengan id (number)
   const pinjamAktif = DB.transaksi.filter(
-    (t) => t.anggota_id === id && tStatus(t) === "dipinjam",
+    (t) => t.anggota_id == id && tStatus(t) === "dipinjam",
   );
   const dendaBelum = DB.denda.filter(
-    (d) => d.anggota_id === id && dStatus(d) === "belum",
+    (d) => d.anggota_id == id && dStatus(d) === "belum",
   );
   if (pinjamAktif.length > 0) {
     box.innerHTML = `<div class="alert alert-error">Masih ada <strong>${pinjamAktif.length} buku</strong> yang belum dikembalikan.<button onclick="this.parentElement.remove()">×</button></div>`;
     btn.disabled = true;
   } else if (dendaBelum.length > 0) {
-    const total = dendaBelum.reduce((s, d) => s + dJumlah(d), 0);
-    box.innerHTML = `<div class="alert alert-warn">Masih ada denda belum lunas: <strong>${fRp(total)}</strong>.<button onclick="this.parentElement.remove()">×</button></div>`;
+    const maxHariSanksi = Math.max(...dendaBelum.map(d => dHari(d)));
+    box.innerHTML = `<div class="alert alert-warn">Masih ada sanksi larangan meminjam aktif: <strong>${maxHariSanksi} hari</strong>.<button onclick="this.parentElement.remove()">×</button></div>`;
     btn.disabled = true;
   } else {
     box.innerHTML = `<div class="alert alert-success">Anggota memenuhi syarat — bebas pinjaman &amp; denda.<button onclick="this.parentElement.remove()">×</button></div>`;
@@ -921,6 +1013,24 @@ async function cekStatusSurat() {
 async function buatSurat() {
   const id = +document.getElementById("surat-anggota").value;
   if (!id) return;
+
+  // Validasi ulang di frontend sebelum kirim ke server
+  const pinjamAktif = DB.transaksi.filter(
+    (t) => t.anggota_id == id && tStatus(t) === "dipinjam",
+  );
+  const dendaBelum = DB.denda.filter(
+    (d) => d.anggota_id == id && dStatus(d) === "belum",
+  );
+  if (pinjamAktif.length > 0) {
+    showAlert(`Tidak dapat menerbitkan surat — masih ada ${pinjamAktif.length} buku yang belum dikembalikan.`, "error");
+    return;
+  }
+  if (dendaBelum.length > 0) {
+    const maxHari = Math.max(...dendaBelum.map(d => dHari(d)));
+    showAlert(`Tidak dapat menerbitkan surat — masih ada sanksi aktif ${maxHari} hari.`, "error");
+    return;
+  }
+
   const res = await apiBuatSurat(id);
   if (res.success) {
     showAlert(res.message);
@@ -1125,9 +1235,8 @@ function filterRiwayat() {
     if (!dendaList.length) {
       dendaInfo = '<span style="color:#a3a3a3">—</span>';
     } else {
-      const totalDenda = dendaList.reduce((s, d) => s + dJumlah(d), 0);
-      const semuaLunas = dendaList.every((d) => dStatus(d) === "lunas");
-      dendaInfo = `<span class="badge ${semuaLunas ? "badge-green" : "badge-red"}">${fRp(totalDenda)}</span>`;
+      const maxHariTelat = Math.max(...dendaList.map((d) => dHari(d)));
+      dendaInfo = `<span class="badge badge-red">telat ${maxHariTelat} hari</span>`;
     }
 
     const statusBadge =

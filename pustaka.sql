@@ -90,8 +90,8 @@ CREATE TABLE IF NOT EXISTS admin (
 -- ── Data Awal Admin ──
 -- Password: admin123
 INSERT INTO admin (username, password, nama) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator'),
-('pustaka', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin Pustaka');
+('admin', '0192023a7bbd73250516f069df18b500', 'Administrator'),
+('pustaka', '0192023a7bbd73250516f069df18b500', 'Admin Pustaka');
 
 -- ── Sample Data Buku ──
 INSERT INTO buku (kode_buku, judul, pengarang, penerbit, tahun_terbit, kategori, stok, stok_tersedia) VALUES

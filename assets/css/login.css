@@ -477,3 +477,171 @@ body {
   .form-title { font-size: 22px; }
   .row-between { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
+/* ══════════════════════════════════════
+   ANIMASI — Login Page
+══════════════════════════════════════ */
+
+/* ── Entrance Animations ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26,58,143,0.3); }
+  50%       { box-shadow: 0 0 0 10px rgba(26,58,143,0); }
+}
+
+@keyframes panPhoto {
+  0%   { transform: scale(1.08) translateX(0); }
+  50%  { transform: scale(1.08) translateX(-1.5%); }
+  100% { transform: scale(1.08) translateX(0); }
+}
+
+@keyframes gradientShift {
+  0%   { opacity: 0.82; }
+  50%  { opacity: 0.72; }
+  100% { opacity: 0.82; }
+}
+
+/* ── Left Panel: staggered entrance ── */
+.left-logo {
+  animation: fadeSlideIn 0.55s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.left-body {
+  animation: fadeSlideUp 0.65s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+}
+
+.form-eyebrow {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.18s both;
+}
+
+.form-title {
+  animation: fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) 0.24s both;
+}
+
+.form-sub {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.3s both;
+}
+
+.form-group:nth-child(1) {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.36s both;
+}
+
+.form-group:nth-child(2) {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.42s both;
+}
+
+.row-between {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.47s both;
+}
+
+.btn-login {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.52s both;
+}
+
+.left-footer {
+  animation: fadeSlideUp 0.4s ease 0.65s both;
+}
+
+/* ── Logo floating animation ── */
+.logo-img {
+  animation: floatY 4s ease-in-out infinite;
+}
+
+/* ── Input focus glow ── */
+.input-wrap input:focus {
+  animation: pulseGlow 1.5s ease-out;
+}
+
+/* ── Button hover shine effect ── */
+.btn-login {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-login::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.15) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-position: 200% center;
+  transition: background-position 0s;
+}
+
+.btn-login:hover::after {
+  background-position: -200% center;
+  transition: background-position 0.55s ease;
+}
+
+/* ── Right panel: photo slow pan + gradient pulse ── */
+.school-photo {
+  animation: panPhoto 18s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.right-panel::before {
+  animation: gradientShift 8s ease-in-out infinite;
+}
+
+/* ── Right content entrance ── */
+.right-content {
+  animation: scaleIn 0.8s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+}
+
+/* ── Particle dots on right panel ── */
+.right-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 40px 40px, 80px 80px;
+  background-position: 0 0, 20px 20px;
+  z-index: 1;
+  pointer-events: none;
+  animation: floatY 12s ease-in-out infinite;
+}
+
+/* ── Success state animation upgrade ── */
+.success-check {
+  animation: popIn 0.45s cubic-bezier(0.34,1.56,0.64,1), pulseGlow 2s ease-in-out 0.45s infinite;
+}
+
+/* ── Nav item hover ripple ── */
+.input-wrap input {
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.3s;
+}
+
+/* ── Error box entrance ── */
+.error-box.show {
+  animation: shake 0.35s ease, fadeSlideUp 0.3s ease both;
+}
